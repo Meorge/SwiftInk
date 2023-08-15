@@ -7,14 +7,31 @@
 
 import Foundation
 
-public class Object {
+public class Object: Equatable {
     public var parent: Object?
     
     private var _path: Path?
     
-    // TODO: debugMetadata
+    private var _debugMetadata: DebugMetadata?
     
-    // TODO: ownDebugMetadata
+    public var debugMetadata: DebugMetadata? {
+        get {
+            if _debugMetadata == nil {
+                if parent != nil {
+                    return parent!.debugMetadata
+                }
+            }
+            
+            return _debugMetadata
+        }
+        set {
+            _debugMetadata = newValue
+        }
+    }
+    
+    public var ownDebugMetadata: DebugMetadata? {
+        return _debugMetadata
+    }
     
     public func DebugLineNumberOfPath(path: Path?) -> Int? {
         if path == nil {
@@ -23,11 +40,11 @@ public class Object {
         
         let root = self.rootContentContainer
         if root != nil {
-            let targetContent = root.ContentAtPath(path).obj
+            let targetContent = root!.ContentAtPath(path!).obj
             if targetContent != nil {
-                let dm = targetContent.debugMetadata
+                let dm = targetContent!.debugMetadata
                 if dm != nil {
-                    return dm.startLineNumber
+                    return dm!.startLineNumber
                 }
             }
         }
@@ -40,23 +57,25 @@ public class Object {
                 _path = Path()
             }
             else {
-                let comps: [Path.Component] = []
+                var comps: [Path.Component] = []
                 
                 var child: Object? = self
-                var container: Container? = child!.parent
+                var container: Container? = child!.parent as? Container
                 
                 while container != nil {
-                    var namedChild = child
-                    if namedChild != nil && namedChild.hasValidName {
-                        comps.append(Path.Component(namedChild.name))
+                    var namedChild = child as? Nameable
+                    if namedChild != nil && namedChild!.hasValidName {
+                        comps.append(Path.Component(namedChild!.name!))
                     }
                     else {
-                        // TODO: fix this
-                        comps.append(Path.Component(container.content.firstIndex(of: child)))
+                        // NOTE: funky, may be broken
+                        comps.append(Path.Component(container!.content.firstIndex(where: { c in
+                            c === child
+                        })!))
                     }
                     
                     child = container
-                    container = container!.parent
+                    container = container!.parent as? Container
                 }
                 
                 _path = Path(comps)
@@ -65,11 +84,115 @@ public class Object {
         return _path!
     }
     
-    public var rootContentContainer: Container {
+    public func ResolvePath(_ path: Path) -> SearchResult? {
+        var _path = path
+        if _path.isRelative {
+            var nearestContainer = self as? Container
+            if nearestContainer == nil {
+                // TODO: Assert that this Object's parent is not nil
+                nearestContainer = parent as? Container
+                // TODO: Assert that nearestContainer is not nil (parent should be container)
+                // TODO: Assert that path.GetComponent(0).isParent is true
+                _path = _path.tail!
+            }
+            
+            return nearestContainer?.ContentAtPath(_path)
+        }
+        else {
+            return rootContentContainer?.ContentAtPath(_path)
+        }
+    }
+    
+    public func ConvertPathToRelative(_ globalPath: Path) -> Path? {
+        // 1. Find last shared ancestor
+        // 2. Drill up using ".." style (actually represented as "^")
+        // 3. Re-build downward chain from common ancestor
+        
+        var ownPath = path
+        
+        var minPathLength = min(globalPath.length, ownPath.length)
+        var lastSharedPathCompIndex = -1
+        
+        for i in 0 ..< minPathLength {
+            var ownComp = ownPath.GetComponent(i)
+            var otherComp = globalPath.GetComponent(i)
+            
+            if ownComp == otherComp {
+                lastSharedPathCompIndex = i
+            }
+            else {
+                break
+            }
+        }
+        
+        // No shared path components, so just use global path
+        if lastSharedPathCompIndex == -1 {
+            return globalPath
+        }
+        
+        var numUpwardsMoves = (ownPath.length - 1) - lastSharedPathCompIndex
+        
+        var newPathComps: [Path.Component] = []
+        
+        for _ in 0 ..< numUpwardsMoves {
+            newPathComps.append(Path.Component.ToParent())
+        }
+        
+        for down in (lastSharedPathCompIndex + 1) ..< globalPath.length {
+            newPathComps.append(globalPath.GetComponent(down))
+        }
+        
+        var relativePath = Path(newPathComps, true)
+        return relativePath
+    }
+    
+    public func CompactPathString(_ otherPath: Path) -> String {
+        var globalPathStr: String? = nil
+        var relativePathStr: String? = nil
+        
+        if otherPath.isRelative {
+            relativePathStr = otherPath.componentsString
+            globalPathStr = path.PathByAppendingPath(otherPath).componentsString
+        }
+        else {
+            var relativePath = ConvertPathToRelative(otherPath)
+            relativePathStr = relativePath?.componentsString
+            globalPathStr = otherPath.componentsString
+        }
+        
+        if relativePathStr!.count < globalPathStr!.count {
+            return relativePathStr!
+        }
+        else {
+            return globalPathStr!
+        }
+    }
+    
+    public var rootContentContainer: Container? {
         var ancestor: Object = self
         while ancestor.parent != nil {
             ancestor = ancestor.parent!
         }
-        return ancestor
+        return ancestor as? Container
+    }
+    
+    public init() {
+        
+    }
+    
+    public func SetChild<T: Object>(_ obj: inout T?, _ value: T?) {
+        if obj != nil {
+            obj!.parent = nil
+        }
+        
+        obj = value
+        
+        if obj != nil {
+            obj!.parent = self
+        }
+    }
+    
+    public static func == (lhs: Object, rhs: Object) -> Bool {
+        return lhs === rhs
     }
 }

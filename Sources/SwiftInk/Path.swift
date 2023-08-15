@@ -18,7 +18,7 @@ public class Path: Equatable, CustomStringConvertible {
     
     public class Component: Equatable, CustomStringConvertible {
         public var description: String {
-            return isIndex ? index.description : name
+            return isIndex ? index.description : name!
         }
         
         private(set) var index: Int
@@ -59,7 +59,7 @@ public class Path: Equatable, CustomStringConvertible {
         return components[index]
     }
     
-    private(set) var isRelative: Bool
+    private(set) var isRelative: Bool = false
     
     public var head: Component? {
         return components.first

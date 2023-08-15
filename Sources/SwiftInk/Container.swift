@@ -7,7 +7,7 @@
 
 import Foundation
 
-public class Container: Object, Nameable {
+public class Container: Object, Nameable {    
     public var name: String?
     
     public var content: [Object] {
@@ -32,8 +32,8 @@ public class Container: Object, Nameable {
             
             for c in content {
                 var named = c as? Nameable
-                if named != nil && named.hasValidName {
-                    namedOnlyContentDict.removeValue(forKey: named!.name)
+                if named != nil && named!.hasValidName {
+                    namedOnlyContentDict.removeValue(forKey: named!.name!)
                 }
             }
             
@@ -58,7 +58,7 @@ public class Container: Object, Nameable {
             for kvPair in newValue! {
                 let named = kvPair.value as? Nameable
                 if named != nil {
-                    AddToNamedContentOnly(named)
+                    AddToNamedContentOnly(named!)
                 }
             }
         }
@@ -72,6 +72,10 @@ public class Container: Object, Nameable {
     
     public struct CountFlags: OptionSet {
         public let rawValue: Int
+        
+        public init(rawValue: Int) {
+            self.rawValue = rawValue
+        }
         
         static let visits = CountFlags(rawValue: 1)
         static let turns = CountFlags(rawValue: 2)
@@ -167,7 +171,7 @@ public class Container: Object, Nameable {
     
     public func TryAddNamedContent(_ contentObj: Object) {
         let namedContentObj = contentObj as? Nameable
-        if namedContentObj != nil && namedContentObj.hasValidName {
+        if namedContentObj != nil && namedContentObj!.hasValidName {
             AddToNamedContentOnly(namedContentObj!)
         }
     }
@@ -176,7 +180,7 @@ public class Container: Object, Nameable {
         // TODO: assert that it can be an object
         let runtimeObj = namedContentObj as! Object
         runtimeObj.parent = self
-        namedContent[namedContentObj.name] = namedContentObj
+        namedContent[namedContentObj.name!] = namedContentObj
     }
     
     public func AddContentsOfContainer(_ otherContainer: Container) {
@@ -221,6 +225,7 @@ public class Container: Object, Nameable {
     }
     
     public func ContentAtPath(_ path: Path, _ partialPathStart: Int = 0, _ partialPathLength: Int = -1) -> SearchResult {
+        var partialPathLength = partialPathLength
         if partialPathLength == -1 {
             partialPathLength = path.length
         }
@@ -275,7 +280,7 @@ public class Container: Object, Nameable {
             sb.append(" (\(String(describing: name)))")
         }
         
-        if self == pointedObj {
+        if self === pointedObj {
             sb.append("  <---")
         }
         
@@ -305,7 +310,7 @@ public class Container: Object, Nameable {
                 sb.append(",")
             }
             
-            if !(obj is Container) && obj == pointedObj {
+            if !(obj is Container) && obj === pointedObj {
                 sb.append("  <---")
             }
             
@@ -317,7 +322,7 @@ public class Container: Object, Nameable {
         for objKV in namedContent {
             // TODO: make Object be equatable??
             let objAsObj = objKV.value as! Object
-            if content.contains(objAsObj) {
+            if content.contains(where: {v in v === objAsObj}) {
                 continue
             }
             else {
