@@ -1,10 +1,3 @@
-//
-//  File.swift
-//  
-//
-//  Created by Malcolm Anderson on 8/15/23.
-//
-
 import Foundation
 
 public class DivertTargetValue: BaseValue, CustomStringConvertible {

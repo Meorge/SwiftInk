@@ -1,10 +1,3 @@
-//
-//  File.swift
-//  
-//
-//  Created by Malcolm Anderson on 8/16/23.
-//
-
 import Foundation
 
 // The value to be assigned is popped off the evaluation stack, so no need to keep it here
