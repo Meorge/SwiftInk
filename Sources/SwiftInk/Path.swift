@@ -36,7 +36,7 @@ public class Path: Equatable, CustomStringConvertible {
             self.name = nil
         }
         
-        init(_ name: String) {
+        init(_ name: String?) {
             self.name = name
             self.index = -1
         }
@@ -107,7 +107,7 @@ public class Path: Equatable, CustomStringConvertible {
         
     }
     
-    init(_ componentsString: String) {
+    init(_ componentsString: String?) {
         components = []
         self.componentsString = componentsString
     }
@@ -153,7 +153,7 @@ public class Path: Equatable, CustomStringConvertible {
     
     private var _componentsString: String? = nil
     
-    private(set) var componentsString: String {
+    private(set) var componentsString: String? {
         get {
             if _componentsString == nil {
                 _componentsString = components.map({ c in
