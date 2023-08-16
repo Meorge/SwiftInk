@@ -24,9 +24,7 @@ public protocol BaseValue<T> {
     var valueType: ValueType { get }
     var isTruthy: Bool { get }
     
-    func Cast(_ newType: ValueType) -> (any BaseValue)?
+    func Cast(_ newType: ValueType) throws -> (any BaseValue)?
     
     var value: T? { get set }
-    
-    // TODO: BadCastException
 }

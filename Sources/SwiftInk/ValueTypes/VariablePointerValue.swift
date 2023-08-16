@@ -16,12 +16,12 @@ public class VariablePointerValue: BaseValue, CustomStringConvertible {
         fatalError("Shouldn't be checking the truthiness of a variable pointer")
     }
     
-    public func Cast(_ newType: ValueType) -> (any BaseValue)? {
+    public func Cast(_ newType: ValueType) throws -> (any BaseValue)? {
         if newType == valueType {
             return self
         }
         
-        fatalError("Bad cast")
+        throw StoryError.badCast(valueObject: self, sourceType: valueType, targetType: newType)
     }
     
     public var value: String?

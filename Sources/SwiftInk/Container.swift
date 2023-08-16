@@ -177,7 +177,7 @@ public class Container: Object, Nameable {
     }
     
     public func AddToNamedContentOnly(_ namedContentObj: Nameable) {
-        // TODO: assert that it can be an object
+        assert(namedContentObj is Object, "Can only add Objects to a Container")
         let runtimeObj = namedContentObj as! Object
         runtimeObj.parent = self
         namedContent[namedContentObj.name!] = namedContentObj
@@ -334,7 +334,7 @@ public class Container: Object, Nameable {
             appendIndentation()
             sb.append("-- named: --\n")
             for objKV in onlyNamed {
-                // TODO: assert that value is container
+                assert(objKV.value is Container, "Can only print out named Containers")
                 var container = objKV.value as! Container
                 sb = container.BuildStringOfHierarchy(sb, currentIndentation, pointedObj)
                 sb.append("\n")

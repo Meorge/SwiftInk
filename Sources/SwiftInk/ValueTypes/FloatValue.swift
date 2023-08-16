@@ -20,7 +20,7 @@ public class FloatValue: BaseValue {
         .Float
     }
     
-    public func Cast(_ newType: ValueType) -> (any BaseValue)? {
+    public func Cast(_ newType: ValueType) throws -> (any BaseValue)? {
         if newType == valueType {
             return self
         }
@@ -37,7 +37,7 @@ public class FloatValue: BaseValue {
             return StringValue(String(describing: value!))
         }
         
-        fatalError("bad cast")
+        throw StoryError.badCast(valueObject: self, sourceType: valueType, targetType: newType)
     }
     
     public init(_ floatVal: Float) {

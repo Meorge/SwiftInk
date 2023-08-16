@@ -47,7 +47,7 @@ public class CallStack {
             callstack = []
         }
         
-        public convenience init(_ jThreadObj: [String: Any], _ storyContext: Story) {
+        public convenience init(_ jThreadObj: [String: Any], _ storyContext: Story) throws {
             self.init()
             
             var jThreadCallstack = jThreadObj["callstack"] as! Array<Any>
@@ -67,7 +67,7 @@ public class CallStack {
                     pointer.index = jElementObj["idx"] as! Int
                     
                     if threadPointerResult.obj == nil {
-                        fatalError("When loading state, internal story location couldn't be found: \(currentContainerPathStr). Has the story changed since this save data was created?")
+                        throw StoryError.exactInternalStoryLocationNotFound(pathStr: currentContainerPathStr ?? "nil")
                     }
                     else if threadPointerResult.approximate {
                         storyContext.Warning("When loading state, exact internal story location couldn't be found: '\(currentContainerPathStr)', so it was approximated to '\(pointer.container.path)' to recover. Has the story changed since this save data was created?")
@@ -134,7 +134,7 @@ public class CallStack {
             return _threads[_threads.count - 1]
         }
         set {
-            // TODO: assert that there is one thread
+            assert(_threads.count == 1, "Shouldn't be directly setting the current thread when we have a stack of them")
             _threads = []
             _threads.append(newValue)
         }

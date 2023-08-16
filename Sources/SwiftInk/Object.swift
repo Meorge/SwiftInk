@@ -89,10 +89,10 @@ public class Object: Equatable {
         if _path.isRelative {
             var nearestContainer = self as? Container
             if nearestContainer == nil {
-                // TODO: Assert that this Object's parent is not nil
+                assert(parent != nil, "Can't resolve relative path because we don't have a parent")
                 nearestContainer = parent as? Container
-                // TODO: Assert that nearestContainer is not nil (parent should be container)
-                // TODO: Assert that path.GetComponent(0).isParent is true
+                assert(nearestContainer != nil, "Expected parent to be a container")
+                assert(path.GetComponent(0).isParent)
                 _path = _path.tail!
             }
             

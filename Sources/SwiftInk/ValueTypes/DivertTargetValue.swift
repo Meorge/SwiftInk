@@ -38,12 +38,12 @@ public class DivertTargetValue: BaseValue, CustomStringConvertible {
         self.init(nil)
     }
     
-    public func Cast(_ newType: ValueType) -> (any BaseValue)? {
+    public func Cast(_ newType: ValueType) throws -> (any BaseValue)? {
         if newType == valueType {
             return self
         }
         
-        fatalError("bad cast")
+        throw StoryError.badCast(valueObject: self, sourceType: valueType, targetType: newType)
     }
     
     public var description: String {

@@ -20,7 +20,7 @@ public class ListValue: Object, BaseValue {
         value!.count > 0
     }
     
-    public func Cast(_ newType: ValueType) -> (any BaseValue)? {
+    public func Cast(_ newType: ValueType) throws -> (any BaseValue)? {
         if newType == valueType {
             return self
         }
@@ -55,7 +55,7 @@ public class ListValue: Object, BaseValue {
             }
         }
         
-        fatalError("bad cast")
+        throw StoryError.badCast(valueObject: self, sourceType: valueType, targetType: newType)
     }
     
     public override init() {

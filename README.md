@@ -19,22 +19,21 @@ Ink runtime engine:
 - 📝 `CallStack`
     - JSON functions need to be implemented
 - ✅ `Choice`
-- ❌ `ChoicePoint`
+- ✅ `ChoicePoint`
 - 📝 `Container`
-- ❌ `ControlCommand`
+- ✅ `ControlCommand`
 - ✅ `DebugMetadata`
 - ❌ `Divert`
 - ❌ `Error`
 - ❌ `Flow`
-- ❌ `Glue`
+- ✅ `Glue`
 - ✅ `INamedContent` (now `Nameable`)
 - ✅ `InkList`
 - ❌ `JsonSerialisation`
 - ❌ `ListDefinition`
 - ❌ `ListDefinitionsOrigin`
 - ❌ `NativeFunctionCall`
-- 📝 `Object`
-    - Assertions need to be added
+- ✅ `Object`
 - 📝 `Path`
     - Various fixes need to be made
 - ✅ `Pointer`
@@ -44,16 +43,15 @@ Ink runtime engine:
 - ❌ `SimpleJson`
 - ❌ `StatePatch`
 - ❌ `Story`
-- ❌ `StoryException`
+- 📝 `StoryException` (now `StoryError`, and with separate errors)
 - ❌ `StoryState`
 - ❌ `StringJoinExtension`
-- ❌ `Tag`
-- 📝 `Value`
-    - Assertions need to be added
-- ❌ `VariableAssignment`
-- ❌ `VariableReference`
+- ✅ `Tag`
+- ✅ `Value` (specific value types now in `ValueTypes` folder)
+- ✅ `VariableAssignment`
+- ✅ `VariableReference`
 - ❌ `VariablesState`
-- ❌ `Void`
+- ✅ `Void`
 
 
 ## Documentation

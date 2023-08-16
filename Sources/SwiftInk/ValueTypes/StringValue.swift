@@ -43,7 +43,7 @@ public class StringValue: BaseValue {
         self.init("")
     }
     
-    public func Cast(_ newType: ValueType) -> (any BaseValue)? {
+    public func Cast(_ newType: ValueType) throws -> (any BaseValue)? {
         if newType == valueType {
             return self
         }
@@ -68,6 +68,6 @@ public class StringValue: BaseValue {
             }
         }
         
-        fatalError("bad cast")
+        throw StoryError.badCast(valueObject: self, sourceType: valueType, targetType: newType)
     }
 }

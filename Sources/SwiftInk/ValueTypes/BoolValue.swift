@@ -20,7 +20,7 @@ public class BoolValue: BaseValue {
         .Bool
     }
     
-    public func Cast(_ newType: ValueType) -> (any BaseValue)? {
+    public func Cast(_ newType: ValueType) throws -> (any BaseValue)? {
         if newType == valueType {
             return self
         }
@@ -37,7 +37,7 @@ public class BoolValue: BaseValue {
             return StringValue(value! ? "true" : "false")
         }
         
-        fatalError("bad cast")
+        throw StoryError.badCast(valueObject: self, sourceType: valueType, targetType: newType)
     }
     
     public init(_ boolVal: Bool) {
