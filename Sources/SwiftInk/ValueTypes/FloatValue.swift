@@ -1,6 +1,6 @@
 import Foundation
 
-public class FloatValue: BaseValue {
+public class FloatValue: Object, BaseValue {
     public var isTruthy: Bool {
         value! != 0.0
     }
@@ -37,7 +37,7 @@ public class FloatValue: BaseValue {
         value = floatVal
     }
     
-    public convenience init() {
+    public convenience override init() {
         self.init(0.0)
     }
 }

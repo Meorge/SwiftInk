@@ -33,16 +33,13 @@ public class ListDefinition {
         return _itemNameToValues.keys.contains(itemName)
     }
     
-    public func TryGetItemWithValue(_ val: Int, _ item: inout InkListItem) -> Bool {
+    public func TryGetItemWithValue(_ val: Int) -> InkListItem? {
         for namedItem in _itemNameToValues {
             if namedItem.value == val {
-                item = InkListItem(name, namedItem.key)
-                return true
+                return InkListItem(name, namedItem.key)
             }
         }
-        
-        item = InkListItem.Null
-        return false
+        return nil
     }
     
     public func TryGetValueForItem(_ item: InkListItem) -> Int? {

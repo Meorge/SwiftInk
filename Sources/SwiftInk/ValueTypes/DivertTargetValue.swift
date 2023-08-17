@@ -1,6 +1,6 @@
 import Foundation
 
-public class DivertTargetValue: BaseValue, CustomStringConvertible {
+public class DivertTargetValue: Object, BaseValue, CustomStringConvertible {
     public var value: Path?
     
     public typealias T = Path
@@ -27,7 +27,7 @@ public class DivertTargetValue: BaseValue, CustomStringConvertible {
         value = targetPath
     }
     
-    public convenience init() {
+    public convenience override init() {
         self.init(nil)
     }
     

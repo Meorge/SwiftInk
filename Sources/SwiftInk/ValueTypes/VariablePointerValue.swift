@@ -1,6 +1,6 @@
 import Foundation
 
-public class VariablePointerValue: BaseValue, CustomStringConvertible {
+public class VariablePointerValue: Object, BaseValue, CustomStringConvertible {
     public var valueType: ValueType {
         .VariablePointer
     }
@@ -47,7 +47,7 @@ public class VariablePointerValue: BaseValue, CustomStringConvertible {
         self.contentIndex = contentIndex
     }
     
-    public convenience init() {
+    public convenience override init() {
         self.init(nil)
     }
     

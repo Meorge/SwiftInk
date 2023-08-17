@@ -9,4 +9,8 @@ enum StoryError: Error {
     case performOperationOnVoid
     case cannotPerformOperation(name: String, valType: ValueType)
     case unexpectedNumberOfParametersToNativeFunctionCall(params: Int)
+    case cannotPerformBinaryOperation(name: String, lhs: ValueType, rhs: ValueType)
+    
+    case couldNotFindListItem(value: Int, listName: String)
+    case couldNotMixListWithValueInOperation(valueType: ValueType)
 }

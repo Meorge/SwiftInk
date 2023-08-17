@@ -1,43 +1,43 @@
 import Foundation
 
-public class NativeFunctionCall: Object {
-    public let Add = "+"
-    public let Subtract = "-"
-    public let Divide = "/"
-    public let Multiply = "*"
-    public let Mod = "%"
-    public let Negate = "_"
+public class NativeFunctionCall: Object, CustomStringConvertible {
+    public static let Add = "+"
+    public static let Subtract = "-"
+    public static let Divide = "/"
+    public static let Multiply = "*"
+    public static let Mod = "%"
+    public static let Negate = "_"
     
-    public let Equal = "=="
-    public let Greater = ">"
-    public let Less = "<"
-    public let GreaterThanOrEquals = ">="
-    public let LessThanOrEquals = "<="
-    public let NotEquals = "!="
-    public let Not = "!"
+    public static let Equal = "=="
+    public static let Greater = ">"
+    public static let Less = "<"
+    public static let GreaterThanOrEquals = ">="
+    public static let LessThanOrEquals = "<="
+    public static let NotEquals = "!="
+    public static let Not = "!"
     
-    public let And = "&&"
-    public let Or = "||"
+    public static let And = "&&"
+    public static let Or = "||"
     
-    public let Min = "MIN"
-    public let Max = "MAX"
+    public static let Min = "MIN"
+    public static let Max = "MAX"
     
-    public let Pow = "POW"
-    public let Floor = "FLOOR"
-    public let Ceiling = "CEILING"
-    public let Int = "INT"
-    public let Float = "FLOAT"
+    public static let Pow = "POW"
+    public static let Floor = "FLOOR"
+    public static let Ceiling = "CEILING"
+    public static let IntName = "INT"
+    public static let FloatName = "FLOAT"
     
-    public let Has = "?"
-    public let Hasnt = "!?"
-    public let Intersect = "^"
+    public static let Has = "?"
+    public static let Hasnt = "!?"
+    public static let Intersect = "^"
     
-    public let ListMin = "LIST_MIN"
-    public let ListMax = "LIST_MAX"
-    public let All = "LIST_ALL"
-    public let Count = "LIST_COUNT"
-    public let ValueOfList = "LIST_VALUE"
-    public let Invert = "LIST_INVERT"
+    public static let ListMin = "LIST_MIN"
+    public static let ListMax = "LIST_MAX"
+    public static let All = "LIST_ALL"
+    public static let Count = "LIST_COUNT"
+    public static let ValueOfList = "LIST_VALUE"
+    public static let Invert = "LIST_INVERT"
     
     public static func CallWithName(_ functionName: String) -> NativeFunctionCall {
         return NativeFunctionCall(functionName)
@@ -55,7 +55,7 @@ public class NativeFunctionCall: Object {
         set {
             _name = newValue
             if !_isPrototype {
-                _prototype = _nativeFunctions[_name]
+                _prototype = NativeFunctionCall._nativeFunctions[_name]
             }
         }
     }
@@ -63,8 +63,8 @@ public class NativeFunctionCall: Object {
     
     var numberOfParameters: Int {
         get {
-            if _prototype {
-                return _prototype.numberOfParameters
+            if _prototype != nil {
+                return _prototype!.numberOfParameters
             }
             else {
                 return _numberOfParameters
@@ -77,8 +77,8 @@ public class NativeFunctionCall: Object {
     private var _numberOfParameters: Int
     
     public func Call(_ parameters: [Object]) throws -> Object? {
-        if _prototype {
-            return _prototype.Call(parameters)
+        if _prototype != nil {
+            return try _prototype!.Call(parameters)
         }
         
         if numberOfParameters != parameters.count {
@@ -97,7 +97,7 @@ public class NativeFunctionCall: Object {
         
         // Binary operations on lists are treated outside of the standard coercion rules
         if parameters.count == 2 && hasList {
-            return CallBinaryListOperation(parameters)
+            return try CallBinaryListOperation(parameters) as! Object
         }
         
         var coercedParams = CoerceValuesToSingleType(parameters)
@@ -156,6 +156,295 @@ public class NativeFunctionCall: Object {
         }
     }
     
-    // TODO: CallBinaryListOperation and onwards!
+    public func CallBinaryListOperation(_ parameters: [Object]) throws -> (any BaseValue)? {
+        // List-Int addition/subtraction returns a List (e.g. "alpha" + 1 = "beta")
+        if (name == NativeFunctionCall.Add || name == NativeFunctionCall.Subtract) && parameters[0] is ListValue && parameters[1] is IntValue {
+            return CallListIncrementOperation(parameters)
+        }
+        
+        var v1 = parameters[0] as! any BaseValue
+        var v2 = parameters[1] as! any BaseValue
+        if (name == NativeFunctionCall.And || name == NativeFunctionCall.Or) && (v1.valueType != .List || v2.valueType != .List) {
+            var op = _operationFuncs[.Int] as BinaryOp<Int>
+            var result = op(v1.isTruthy ? 1 : 0, v2.isTruthy ? 1 : 0) as! Bool
+            return BoolValue(result)
+        }
+        
+        // Normal (list * list) operation
+        if v1.valueType == .List && v2.valueType == .List {
+            return Call<InkList>([v1, v2])
+        }
+        
+        throw StoryError.cannotPerformBinaryOperation(name: name, lhs: v1.valueType, rhs: v2.valueType)
+    }
     
+    func CallListIncrementOperation(_ listIntParams: [Object]) -> ListValue {
+        var listVal = listIntParams[0] as? ListValue
+        var intVal = listIntParams[1] as? IntValue
+        
+        var resultRawList = InkList()
+        for listItemWithValue in listVal!.value!.internalDict {
+            var listItem = listItemWithValue.key
+            var listItemValue = listItemWithValue.value
+            
+            // Find + or - operation
+            var intOp = _operationFuncs[.Int] as! BinaryOp<Int>
+            
+            // Return value unknown until evaluated
+            var targetInt = intOp(listItemValue, intVal!.value!) as! Int
+            
+            // Find this item's origin (linear search should be ok, should be short haha)
+            var itemOrigin = listVal?.value!.origins.first { $0.name == listItem.originName }
+            
+            if itemOrigin != nil {
+                if let incrementedItem = itemOrigin?.TryGetItemWithValue(targetInt) {
+                    resultRawList.internalDict[incrementedItem] = targetInt
+                }
+            }
+        }
+        
+        return ListValue(resultRawList)
+    }
+    
+    func CoerceValuesToSingleType(_ parametersIn: [Object]) -> [any BaseValue] {
+        var valType = ValueType.Int
+        var specialCaseList: ListValue? = nil
+        
+        // Find out what the output type is
+        // "Higher level" types infect both so that binary operations
+        // use the same type on both sides. e.g. binary operation of
+        // int and float causes the int to be casted to a float.
+        for obj in parametersIn {
+            var val = obj as! any BaseValue
+            if val.valueType > valType {
+                valType = val.valueType
+            }
+            
+            if val.valueType == ValueType.List {
+                specialCaseList = val as? ListValue
+            }
+        }
+        
+        // Coerce to this chosen type
+        var parametersOut: [any BaseValue] = []
+        
+        // Special case: Coercing to Ints to Lists
+        // We have to do it early when we have both parameters
+        // to hand - so that we can make use of the List's origin
+        if valType == .List {
+            for val in parametersIn as! [any BaseValue] {
+                if val.valueType == .List {
+                    parametersOut.append(val)
+                }
+                else if val.valueType == .Int {
+                    var intVal = val.value as! Int
+                    
+                    var list = specialCaseList?.value?.originOfMaxItem
+                    
+                    if let item = list?.TryGetItemWithValue(intVal) {
+                        parametersOut.append(ListValue(item, intVal))
+                    }
+                    else {
+                        throw StoryError.couldNotFindListItem(value: intVal, listName: list.name)
+                    }
+                }
+                else {
+                    throw StoryError.couldNotMixListWithValueInOperation(valueType: val.valueType)
+                }
+            }
+        }
+        
+        else {
+            for val in parametersIn as! [any BaseValue] {
+                parametersOut.append(val.Cast(valType))
+            }
+        }
+        
+        return parametersOut
+    }
+    
+    public init(_ name: String) {
+        NativeFunctionCall.GenerateNativeFunctionsIfNecessary()
+        self.name = name
+    }
+
+    public override init() {
+        NativeFunctionCall.GenerateNativeFunctionsIfNecessary()
+    }
+    
+    internal init(_ name: String, _ numberOfParameters: Int) {
+        _isPrototype = true
+        self.name = name
+        self.numberOfParameters = numberOfParameters
+    }
+    
+    static func Identity<T>(_ t: T) -> Any? {
+        return t
+    }
+    
+    static func GenerateNativeFunctionsIfNecessary() {
+        // Why no bool operations?
+        // Before evaluation, all bools are coerced to ints in
+        // CoerceValuesToSingleType (see default value for valType at top).
+        // So, no operations are ever directly done in bools themselves.
+        // This also means that 1 == true works, since true is always converted
+        // to 1 first.
+        // However, many operations retunr a "native" bool (equals, etc).
+        
+        // Int operations
+        AddIntBinaryOp(Add, { $0! + $1! })
+        AddIntBinaryOp(Subtract, { $0! - $1! })
+        AddIntBinaryOp(Multiply, { $0! * $1! })
+        AddIntBinaryOp(Divide, { $0! / $1! })
+        AddIntBinaryOp(Mod, { $0! % $1! })
+        AddIntUnaryOp(Negate, { -$0! })
+        
+        AddIntBinaryOp(Equal, { $0! == $1! })
+        AddIntBinaryOp(Greater, { $0! > $1! })
+        AddIntBinaryOp(Less, { $0! < $1! })
+        AddIntBinaryOp(GreaterThanOrEquals, { $0! >= $1! })
+        AddIntBinaryOp(LessThanOrEquals, { $0! <= $1! })
+        AddIntBinaryOp(NotEquals, { $0! != $1 })
+        AddIntUnaryOp(Not, { $0! == 0 })
+        
+        AddIntBinaryOp(And, { $0! != 0 && $1! != 0 })
+        AddIntBinaryOp(Or, { $0 != 0 || $1! != 0 })
+        
+        AddIntBinaryOp(Max, { max($0!, $1!) })
+        AddIntBinaryOp(Min, { min($0!, $1!) })
+        
+        // Have to cast to float since you could do POW(2, -1)
+        AddIntBinaryOp(Pow, { Float(powf(Float($0!), Float($1!))) })
+        AddIntUnaryOp(Floor, Identity)
+        AddIntUnaryOp(Ceiling, Identity)
+        AddIntUnaryOp(IntName, Identity)
+        AddIntUnaryOp(FloatName, { Float($0!) })
+        
+        // Float operations
+        AddFloatBinaryOp(Add, { $0! + $1! })
+        AddFloatBinaryOp(Subtract, { $0! - $1! })
+        AddFloatBinaryOp(Multiply, { $0! * $1! })
+        AddFloatBinaryOp(Divide, { $0! / $1! })
+        AddFloatBinaryOp(Mod, { $0!.truncatingRemainder(dividingBy: $1!) })
+        AddFloatUnaryOp(Negate, { -$0! })
+        
+        AddFloatBinaryOp(Equal, { $0! == $1! })
+        AddFloatBinaryOp(Greater, { $0! > $1! })
+        AddFloatBinaryOp(Less, { $0! < $1! })
+        AddFloatBinaryOp(GreaterThanOrEquals, { $0! >= $1! })
+        AddFloatBinaryOp(LessThanOrEquals, { $0! <= $1! })
+        AddFloatBinaryOp(NotEquals, { $0! != $1 })
+        AddFloatUnaryOp(Not, { $0! == 0.0 })
+        
+        AddFloatBinaryOp(And, { $0! != 0 && $1! != 0 })
+        AddFloatBinaryOp(Or, { $0 != 0 || $1! != 0 })
+        
+        AddFloatBinaryOp(Max, { max($0!, $1!) })
+        AddFloatBinaryOp(Min, { min($0!, $1!) })
+        
+        AddFloatBinaryOp(Pow, { powf($0!, $1!) })
+        AddFloatUnaryOp(Floor, { floorf($0!) })
+        AddFloatUnaryOp(Ceiling, { ceilf($0!) })
+        AddFloatUnaryOp(IntName, { Int($0!) })
+        AddFloatUnaryOp(FloatName, Identity)
+        
+        // String operations
+        AddStringBinaryOp(Add, { $0! + $1! })
+        AddStringBinaryOp(Equal, { $0! == $1! })
+        AddStringBinaryOp(NotEquals, { $0! != $1! })
+        AddStringBinaryOp(Has, { $0!.contains($1!) })
+        AddStringBinaryOp(Hasnt, { !$0!.contains($1!) })
+        
+        // List operations
+        AddListBinaryOp(Add, { $0!.Union($1!) })
+        AddListBinaryOp(Subtract, { $0!.Without($1!) })
+        AddListBinaryOp(Has, { $0!.Contains($1!) })
+        AddListBinaryOp(Hasnt, { !$0!.Contains($1!) })
+        AddListBinaryOp(Intersect, { $0!.Intersect($1!) })
+        
+        AddListBinaryOp(Equal, { $0! == $1! })
+        AddListBinaryOp(Greater, { $0!.GreaterThan($1!) })
+        AddListBinaryOp(Less, { $0!.LessThan($1!) })
+        AddListBinaryOp(GreaterThanOrEquals, { $0!.GreaterThanOrEquals($1!) })
+        AddListBinaryOp(LessThanOrEquals, { $0!.LessThanOrEquals($1!) })
+        AddListBinaryOp(NotEquals, { $0! != $1! })
+        
+        AddListBinaryOp(And, { $0!.count > 0 && $1!.count > 0 })
+        AddListBinaryOp(Or, { $0!.count > 0 || $1!.count > 0 })
+        
+        AddListUnaryOp(Not, { $0!.count == 0 ? 1 : 0 })
+        
+        // Placeholders to ensure that these special case functions can exist,
+        // since these functions are never actually run, and are special cased in Call
+        AddListUnaryOp(Invert, { $0!.inverse })
+        AddListUnaryOp(All, { $0!.all })
+        AddListUnaryOp(ListMin, { $0!.MinAsList() })
+        AddListUnaryOp(ListMax, { $0!.MaxAsList() })
+        AddListUnaryOp(Count, { $0!.count })
+        AddListUnaryOp(ValueOfList, { $0!.maxItem.value })
+        
+        // Divert target operations
+        AddOpToNativeFunc(Equal, 2, .DivertTarget, {(d1: Path, d2: Path) in d1 == d2 })
+        AddOpToNativeFunc(NotEquals, 2, .DivertTarget, {(d1: Path, d2: Path) in d1 != d2 })
+    }
+    
+    func AddOpFuncForType(_ valType: ValueType, _ op: Any?) {
+        _operationFuncs[valType] = op
+    }
+
+    static func AddOpToNativeFunc(_ name: String, _ args: Int, _ valType: ValueType, _ op: Any?) {
+        var nativeFunc: NativeFunctionCall? = nil
+        
+        if _nativeFunctions.keys.contains(name) {
+            nativeFunc = NativeFunctionCall(name, args)
+            _nativeFunctions[name] = nativeFunc
+        }
+        else {
+            nativeFunc = _nativeFunctions[name]
+        }
+        
+        nativeFunc.AddOpFuncForType(valType, op)
+    }
+    
+    static func AddIntBinaryOp(_ name: String?, _ op: BinaryOp<Int>) {
+        AddOpToNativeFunc(name, 2, ValueType.Int, op)
+    }
+    
+    static func AddIntUnaryOp(_ name: String?, _ op: UnaryOp<Int>) {
+        AddOpToNativeFunc(name, 1, ValueType.Int, op)
+    }
+
+    static func AddFloatBinaryOp(_ name: String?, _ op: BinaryOp<Float>) {
+        AddOpToNativeFunc(name, 2, ValueType.Float, op)
+    }
+    
+    static func AddStringBinaryOp(_ name: String?, _ op: BinaryOp<String>) {
+        AddOpToNativeFunc(name, 2, ValueType.String, op)
+    }
+    
+    static func AddListBinaryOp(_ name: String?, _ op: BinaryOp<InkList>) {
+        AddOpToNativeFunc(name, 2, ValueType.List, op)
+    }
+    
+    static func AddListUnaryOp(_ name: String?, _ op: UnaryOp<InkList>) {
+        AddOpToNativeFunc(name, 1, ValueType.List, op)
+    }
+    
+    static func AddFloatUnaryOp(_ name: String?, _ op: UnaryOp<Float>) {
+        AddOpToNativeFunc(name, 1, ValueType.Float, op)
+    }
+    
+    public var description: String {
+        "Native '\(name)'"
+    }
+    
+    typealias BinaryOp<T> = (_ left: T?, _ right: T?) -> Any?
+    typealias UnaryOp<T> = (_ val: T?) -> Any?
+    
+    private var _prototype: NativeFunctionCall?
+    private var _isPrototype: Bool
+    
+    // Operations for each data type, for a single operation (e.g. "+")
+    private var _operationFuncs: [ValueType: Any?] = [:]
+    private static var _nativeFunctions: [String: NativeFunctionCall] = [:]
 }

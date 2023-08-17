@@ -24,7 +24,7 @@ Ink runtime engine:
 - ✅ `ControlCommand`
 - ✅ `DebugMetadata`
 - ✅ `Divert`
-- ❌ `Error`
+- ✅ `Error`
 - 📝 `Flow`
     - JSON functions need to be implemented
 - ✅ `Glue`
@@ -33,7 +33,7 @@ Ink runtime engine:
 - ❌ `JsonSerialisation`
 - ✅ `ListDefinition`
 - ✅ `ListDefinitionsOrigin`
-- 📝 `NativeFunctionCall`
+- ✅ `NativeFunctionCall`
 - ✅ `Object`
 - ✅ `Path`
 - ✅ `Pointer`

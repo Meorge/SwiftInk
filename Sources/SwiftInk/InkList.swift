@@ -46,7 +46,7 @@ public struct InkListItem: CustomStringConvertible, Equatable, Hashable {
 }
 
 public class InkList: Equatable, Hashable, CustomStringConvertible {
-    private var internalDict: [InkListItem: Int] = [:]
+    internal var internalDict: [InkListItem: Int] = [:]
     
     /// Create a new empty ink list.
     public init() {}

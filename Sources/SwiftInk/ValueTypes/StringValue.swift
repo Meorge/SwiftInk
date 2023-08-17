@@ -1,6 +1,6 @@
 import Foundation
 
-public class StringValue: BaseValue {
+public class StringValue: Object, BaseValue {
     public var isTruthy: Bool {
         value!.count > 0
     }
@@ -32,7 +32,7 @@ public class StringValue: BaseValue {
         }
     }
     
-    public convenience init() {
+    public convenience override init() {
         self.init("")
     }
     

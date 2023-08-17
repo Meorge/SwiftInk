@@ -1,6 +1,6 @@
 import Foundation
 
-public class IntValue: BaseValue {
+public class IntValue: Object, BaseValue {
     public var isTruthy: Bool {
         value! != 0
     }
@@ -37,7 +37,7 @@ public class IntValue: BaseValue {
         value = intVal
     }
     
-    public convenience init() {
+    public convenience override init() {
         self.init(0)
     }
 }
