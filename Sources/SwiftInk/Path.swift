@@ -2,7 +2,7 @@ import Foundation
 
 public class Path: Equatable, CustomStringConvertible {
     public var description: String {
-        componentsString
+        String(describing: componentsString)
     }
     
     static var parentId = "^"
@@ -64,7 +64,6 @@ public class Path: Equatable, CustomStringConvertible {
             return Path(tailComps)
         }
         else {
-            // TODO: is this correct? C# code returns Path.self
             return Path.selfPath
         }
     }

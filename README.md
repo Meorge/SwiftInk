@@ -20,29 +20,29 @@ Ink runtime engine:
     - JSON functions need to be implemented
 - ✅ `Choice`
 - ✅ `ChoicePoint`
-- 📝 `Container`
+- ✅ `Container`
 - ✅ `ControlCommand`
 - ✅ `DebugMetadata`
-- ❌ `Divert`
+- ✅ `Divert`
 - ❌ `Error`
-- ❌ `Flow`
+- 📝 `Flow`
+    - JSON functions need to be implemented
 - ✅ `Glue`
 - ✅ `INamedContent` (now `Nameable`)
 - ✅ `InkList`
 - ❌ `JsonSerialisation`
-- ❌ `ListDefinition`
-- ❌ `ListDefinitionsOrigin`
-- ❌ `NativeFunctionCall`
+- ✅ `ListDefinition`
+- ✅ `ListDefinitionsOrigin`
+- 📝 `NativeFunctionCall`
 - ✅ `Object`
-- 📝 `Path`
-    - Various fixes need to be made
+- ✅ `Path`
 - ✅ `Pointer`
 - ❌ `Profiler`
 - ✅ `PushPop`
 - ✅ `SearchResult`
 - ❌ `SimpleJson`
 - ❌ `StatePatch`
-- ❌ `Story`
+- 📝 `Story`
 - 📝 `StoryException` (now `StoryError`, and with separate errors)
 - ❌ `StoryState`
 - ❌ `StringJoinExtension`

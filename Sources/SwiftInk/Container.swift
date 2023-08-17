@@ -132,11 +132,11 @@ public class Container: Object, Nameable {
         namedContent = [:]
     }
     
-    public func AddContent(_ contentObj: Object) {
+    public func AddContent(_ contentObj: Object) throws {
         content.append(contentObj)
         
         if contentObj.parent != nil {
-            // TODO: Throw exception because this content already has a parent
+            throw StoryError.contentAlreadyHasParent(parent: contentObj.parent!)
         }
         
         contentObj.parent = self
@@ -144,17 +144,17 @@ public class Container: Object, Nameable {
         TryAddNamedContent(contentObj)
     }
     
-    public func AddContent(_ contentList: [Object]) {
+    public func AddContent(_ contentList: [Object]) throws {
         for c in contentList {
-            AddContent(c)
+            try AddContent(c)
         }
     }
     
-    public func InsertContent(_ contentObj: Object, _ index: Int) {
+    public func InsertContent(_ contentObj: Object, _ index: Int) throws {
         content.insert(contentObj, at: index)
         
         if contentObj.parent != nil {
-            // TODO: Throw exception because this content already has a parent
+            throw StoryError.contentAlreadyHasParent(parent: contentObj.parent!)
         }
         
         contentObj.parent = self
@@ -184,8 +184,7 @@ public class Container: Object, Nameable {
         }
     }
     
-    func ContentWithPathComponent(_ component: Path.Component) -> Object? {
-        // TODO: this function is protected in C#
+    internal func ContentWithPathComponent(_ component: Path.Component) -> Object? {
         if component.isIndex {
             if component.index >= 0 && component.index < content.count {
                 return content[component.index]
@@ -313,7 +312,6 @@ public class Container: Object, Nameable {
         var onlyNamed: [String: Nameable] = [:]
         
         for objKV in namedContent {
-            // TODO: make Object be equatable??
             let objAsObj = objKV.value as! Object
             if content.contains(where: {v in v === objAsObj}) {
                 continue
