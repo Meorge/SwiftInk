@@ -13,4 +13,8 @@ enum StoryError: Error {
     
     case couldNotFindListItem(value: Int, listName: String)
     case couldNotMixListWithValueInOperation(valueType: ValueType)
+    
+    case cannotAssignToUndeclaredVariable(name: String)
+    case cannotPassNilToVariableState
+    case invalidValuePassedToVariableState(value: Any?)
 }

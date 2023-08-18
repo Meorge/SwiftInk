@@ -16,8 +16,7 @@ Legend:
 - ❌ - Not started
 
 Ink runtime engine:
-- 📝 `CallStack`
-    - JSON functions need to be implemented
+- 📝 `CallStack` (JSON functions need to be implemented)
 - ✅ `Choice`
 - ✅ `ChoicePoint`
 - ✅ `Container`
@@ -25,8 +24,7 @@ Ink runtime engine:
 - ✅ `DebugMetadata`
 - ✅ `Divert`
 - ✅ `Error`
-- 📝 `Flow`
-    - JSON functions need to be implemented
+- 📝 `Flow` (JSON functions need to be implemented)
 - ✅ `Glue`
 - ✅ `INamedContent` (now `Nameable`)
 - ✅ `InkList`
@@ -37,13 +35,13 @@ Ink runtime engine:
 - ✅ `Object`
 - ✅ `Path`
 - ✅ `Pointer`
-- ❌ `Profiler`
+- ✅ `Profiler`
 - ✅ `PushPop`
 - ✅ `SearchResult`
 - ❌ `SimpleJson`
-- ❌ `StatePatch`
+- ✅ `StatePatch`
 - 📝 `Story`
-- 📝 `StoryException` (now `StoryError`, and with separate errors)
+- ✅ `StoryException` (now `StoryError`, and with separate errors)
 - ❌ `StoryState`
 - ❌ `StringJoinExtension`
 - ✅ `Tag`

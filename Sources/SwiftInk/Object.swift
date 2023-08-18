@@ -1,6 +1,6 @@
 import Foundation
 
-public class Object: Equatable {
+public class Object: Equatable, Hashable {
     public var parent: Object?
     
     private var _path: Path?
@@ -187,5 +187,9 @@ public class Object: Equatable {
     
     public static func == (lhs: Object, rhs: Object) -> Bool {
         return lhs === rhs
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(self))
     }
 }

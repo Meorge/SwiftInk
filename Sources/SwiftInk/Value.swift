@@ -1,8 +1,8 @@
 import Foundation
 
-public enum ValueType
+public enum ValueType: Int
 {
-    case Bool
+    case Bool = -1
     case Int
     case Float
     case List
@@ -20,4 +20,27 @@ public protocol BaseValue<T>: Object {
     func Cast(_ newType: ValueType) throws -> (any BaseValue)?
     
     var value: T? { get set }
+}
+
+public func CreateValue(_ val: Any?) -> (any BaseValue)? {
+    if val is Bool {
+        return BoolValue(val as! Bool)
+    }
+    else if val is Int {
+        return IntValue(val as! Int)
+    }
+    else if val is Float || val is Double {
+        return FloatValue(val as! Float)
+    }
+    else if val is String {
+        return StringValue(val as! String)
+    }
+    else if val is Path {
+        return DivertTargetValue((val as! Path))
+    }
+    else if val is InkList {
+        return ListValue(val as! InkList)
+    }
+    
+    return nil
 }

@@ -98,7 +98,7 @@ public class Story: Object {
         state.variablesState
     }
     
-    public var listDefinitions: ListDefinitionsOrigin {
+    public var listDefinitions: ListDefinitionsOrigin? {
         _listDefinitions
     }
     

@@ -100,34 +100,32 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
             return try CallBinaryListOperation(parameters) as! Object
         }
         
-        var coercedParams = CoerceValuesToSingleType(parameters)
+        var coercedParams = try CoerceValuesToSingleType(parameters)
         var coercedType = coercedParams[0].valueType
         
         switch coercedType {
         case .Int:
-            return Call<Int>(coercedParams)
+            return try Call<Int>(coercedParams)
         case .Float:
-            return Call<Float>(coercedParams)
+            return try Call<Float>(coercedParams)
         case .String:
-            return Call<String>(coercedParams)
+            return try Call<String>(coercedParams)
         case .DivertTarget:
-            return Call<Path>(coercedParams)
+            return try Call<Path>(coercedParams)
         case .List:
-            return Call<InkList>(coercedParams)
+            return try Call<InkList>(coercedParams)
         default:
             return nil
         }
     }
     
-    public func Call<T: Any>(_ parametersOfSingleType: [any BaseValue]) throws -> (any BaseValue)? {
+    public func Call<T>(_ parametersOfSingleType: [some BaseValue<T>]) throws -> (any BaseValue)? {
         let param1 = parametersOfSingleType[0]
         let valType = param1.valueType
         
         var paramCount = parametersOfSingleType.count
         
-        if paramCount == 2 || paramCount == 1 {
-            var opForTypeObj: Any? = nil
-            
+        if paramCount == 2 || paramCount == 1 {            
             guard let opForTypeObj = _operationFuncs[valType] else {
                 throw StoryError.cannotPerformOperation(name: name, valType: valType)
             }
@@ -136,18 +134,18 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
             if paramCount == 2 {
                 let param2 = parametersOfSingleType[1]
                 
-                var opForType = opForTypeObj as BinaryOp<T>
+                var opForType = opForTypeObj as! BinaryOp<T>
                 
                 // Return value unknown until it's evaluated
                 var resultVal: Any? = opForType(param1.value, param2.value)
-                return BaseValue.Create(resultVal)
+                return CreateValue(resultVal)
             }
             
             // Unary
             else {
-                var opForType = opForTypeObj as UnaryOp<T>
+                var opForType = opForTypeObj as! UnaryOp<T>
                 var resultVal: Any? = opForType(param1.value)
-                return BaseValue.Create(resultVal)
+                return CreateValue(resultVal)
             }
         }
         
@@ -165,7 +163,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
         var v1 = parameters[0] as! any BaseValue
         var v2 = parameters[1] as! any BaseValue
         if (name == NativeFunctionCall.And || name == NativeFunctionCall.Or) && (v1.valueType != .List || v2.valueType != .List) {
-            var op = _operationFuncs[.Int] as BinaryOp<Int>
+            var op = _operationFuncs[.Int] as! BinaryOp<Int>
             var result = op(v1.isTruthy ? 1 : 0, v2.isTruthy ? 1 : 0) as! Bool
             return BoolValue(result)
         }
@@ -206,7 +204,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
         return ListValue(resultRawList)
     }
     
-    func CoerceValuesToSingleType(_ parametersIn: [Object]) -> [any BaseValue] {
+    func CoerceValuesToSingleType(_ parametersIn: [Object]) throws -> [any BaseValue] {
         var valType = ValueType.Int
         var specialCaseList: ListValue? = nil
         
@@ -216,7 +214,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
         // int and float causes the int to be casted to a float.
         for obj in parametersIn {
             var val = obj as! any BaseValue
-            if val.valueType > valType {
+            if val.valueType.rawValue > valType.rawValue {
                 valType = val.valueType
             }
             
@@ -236,16 +234,14 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
                 if val.valueType == .List {
                     parametersOut.append(val)
                 }
-                else if val.valueType == .Int {
-                    var intVal = val.value as! Int
-                    
-                    var list = specialCaseList?.value?.originOfMaxItem
-                    
+                else if let intValObj = val as? IntValue {
+                    var intVal = intValObj.value!
+                    var list = specialCaseList!.value!.originOfMaxItem
                     if let item = list?.TryGetItemWithValue(intVal) {
                         parametersOut.append(ListValue(item, intVal))
                     }
                     else {
-                        throw StoryError.couldNotFindListItem(value: intVal, listName: list.name)
+                        throw StoryError.couldNotFindListItem(value: intVal, listName: list!.name)
                     }
                 }
                 else {
@@ -256,7 +252,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
         
         else {
             for val in parametersIn as! [any BaseValue] {
-                parametersOut.append(val.Cast(valType))
+                parametersOut.append(try val.Cast(valType)!)
             }
         }
         
@@ -403,34 +399,34 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
             nativeFunc = _nativeFunctions[name]
         }
         
-        nativeFunc.AddOpFuncForType(valType, op)
+        nativeFunc!.AddOpFuncForType(valType, op)
     }
     
-    static func AddIntBinaryOp(_ name: String?, _ op: BinaryOp<Int>) {
+    static func AddIntBinaryOp(_ name: String, _ op: @escaping BinaryOp<Int>) {
         AddOpToNativeFunc(name, 2, ValueType.Int, op)
     }
     
-    static func AddIntUnaryOp(_ name: String?, _ op: UnaryOp<Int>) {
+    static func AddIntUnaryOp(_ name: String, _ op: @escaping UnaryOp<Int>) {
         AddOpToNativeFunc(name, 1, ValueType.Int, op)
     }
 
-    static func AddFloatBinaryOp(_ name: String?, _ op: BinaryOp<Float>) {
+    static func AddFloatBinaryOp(_ name: String, _ op: @escaping BinaryOp<Float>) {
         AddOpToNativeFunc(name, 2, ValueType.Float, op)
     }
     
-    static func AddStringBinaryOp(_ name: String?, _ op: BinaryOp<String>) {
+    static func AddStringBinaryOp(_ name: String, _ op: @escaping BinaryOp<String>) {
         AddOpToNativeFunc(name, 2, ValueType.String, op)
     }
     
-    static func AddListBinaryOp(_ name: String?, _ op: BinaryOp<InkList>) {
+    static func AddListBinaryOp(_ name: String, _ op: @escaping BinaryOp<InkList>) {
         AddOpToNativeFunc(name, 2, ValueType.List, op)
     }
     
-    static func AddListUnaryOp(_ name: String?, _ op: UnaryOp<InkList>) {
+    static func AddListUnaryOp(_ name: String, _ op: @escaping UnaryOp<InkList>) {
         AddOpToNativeFunc(name, 1, ValueType.List, op)
     }
     
-    static func AddFloatUnaryOp(_ name: String?, _ op: UnaryOp<Float>) {
+    static func AddFloatUnaryOp(_ name: String, _ op: @escaping UnaryOp<Float>) {
         AddOpToNativeFunc(name, 1, ValueType.Float, op)
     }
     
