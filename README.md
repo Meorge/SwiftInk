@@ -42,7 +42,7 @@ Ink runtime engine:
 - ✅ `StatePatch`
 - 📝 `Story`
 - ✅ `StoryException` (now `StoryError`, and with separate errors)
-- ❌ `StoryState`
+- 📝 `StoryState`
 - ❌ `StringJoinExtension`
 - ✅ `Tag`
 - ✅ `Value` (specific value types now in `ValueTypes` folder)
