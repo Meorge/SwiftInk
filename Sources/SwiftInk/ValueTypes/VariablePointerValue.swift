@@ -40,11 +40,11 @@ public class VariablePointerValue: Object, BaseValue, CustomStringConvertible {
     // -1 = default, unknown, yet to be determined
     // 0  = in global scope
     // 1+ = callstack element index + 1 (so first doesn't conflict with special global scope)
-    public var contentIndex: Int
+    public var contextIndex: Int
     
-    public init(_ variableName: String?, _ contentIndex: Int = -1) {
+    public init(_ variableName: String?, _ contextIndex: Int = -1) {
         value = variableName
-        self.contentIndex = contentIndex
+        self.contextIndex = contextIndex
     }
     
     public convenience override init() {

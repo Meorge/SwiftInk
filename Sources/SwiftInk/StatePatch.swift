@@ -32,6 +32,10 @@ public class StatePatch {
         }
     }
     
+    public func SetGlobal(_ name: String, _ value: Object) {
+        _globals[name] = value
+    }
+    
     var _globals: [String: Object] = [:]
     var _changedVariables: Set<String> = Set()
     var _visitCounts: [Container: Int] = [:]

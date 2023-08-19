@@ -17,4 +17,6 @@ enum StoryError: Error {
     case cannotAssignToUndeclaredVariable(name: String)
     case cannotPassNilToVariableState
     case invalidValuePassedToVariableState(value: Any?)
+    
+    case unsupportedRuntimeObjectType(valType: String)
 }

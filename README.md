@@ -48,7 +48,7 @@ Ink runtime engine:
 - ✅ `Value` (specific value types now in `ValueTypes` folder)
 - ✅ `VariableAssignment`
 - ✅ `VariableReference`
-- ❌ `VariablesState`
+- 📝 `VariablesState` (JSON functions need to be implemented)
 - ✅ `Void`
 
 

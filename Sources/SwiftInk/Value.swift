@@ -12,8 +12,8 @@ public enum ValueType: Int
     case VariablePointer
 }
 
-public protocol BaseValue<T>: Object {
-    associatedtype T
+public protocol BaseValue<T>: Object, Equatable {
+    associatedtype T = Equatable
     var valueType: ValueType { get }
     var isTruthy: Bool { get }
     
