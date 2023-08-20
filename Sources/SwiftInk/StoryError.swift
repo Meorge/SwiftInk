@@ -19,4 +19,12 @@ enum StoryError: Error {
     case invalidValuePassedToVariableState(value: Any?)
     
     case unsupportedRuntimeObjectType(valType: String)
+    
+    case contentAtPathNotFound(path: String)
+    
+    case cannotDestroyDefaultFlow
+    
+    case poppingTooManyObjects
+    
+    case invalidArgument(argName: String)
 }
