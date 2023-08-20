@@ -42,8 +42,8 @@ Ink runtime engine:
 - ✅ `StatePatch`
 - 📝 `Story`
 - ✅ `StoryException` (now `StoryError`, and with separate errors)
-- 📝 `StoryState`
-- ❌ `StringJoinExtension`
+- 📝 `StoryState` (JSON functions need to be implemented)
+- ✅ `StringJoinExtension` (uses built-in Swift methods)
 - ✅ `Tag`
 - ✅ `Value` (specific value types now in `ValueTypes` folder)
 - ✅ `VariableAssignment`

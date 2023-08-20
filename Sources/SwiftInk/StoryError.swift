@@ -27,4 +27,6 @@ enum StoryError: Error {
     case poppingTooManyObjects
     
     case invalidArgument(argName: String)
+    
+    case expectedExternalFunctionEvaluationComplete(stackTrace: String)
 }

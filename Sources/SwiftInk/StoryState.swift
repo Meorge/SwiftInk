@@ -25,7 +25,7 @@ public class StoryState {
     /// Callback for when a state is loaded
     public var onDidLoadState: (() -> Void)?
     
-    // TODO: ToJson()
+    // TODO: COMPLETE FUNCTION BODY
     /// Exports the current state to JSON format, in order to save the game,
     /// and returns it as a string.
     /// - Returns: The save state in JSON format.
@@ -33,7 +33,7 @@ public class StoryState {
         return ""
     }
     
-    // TODO: ToJson()
+    // TODO: COMPLETE FUNCTION BODY
     /// Exports the current state to JSON format, in order to save the game, and
     /// writes it to the provided stream.
     /// - Parameter stream: The stream to write the JSON string to.
@@ -41,7 +41,7 @@ public class StoryState {
         
     }
     
-    // TODO: LoadJson()
+    // TODO: COMPLETE FUNCTION BODY
     /// Loads a previously saved state in JSON format.
     /// - Parameter json: The JSON string to load.
     public func LoadJson(_ json: String) {
@@ -158,7 +158,7 @@ public class StoryState {
     private(set) var currentWarnings: [String] = []
     private(set) var variablesState: VariablesState?
     public var callStack: CallStack {
-        _currentFlow.callStack
+        _currentFlow.callStack!
     }
     
     private(set) var evaluationStack: [Object] = []
@@ -324,7 +324,7 @@ public class StoryState {
     var _currentTags: [String] = []
     
     public var currentFlowName: String {
-        _currentFlow.name
+        _currentFlow.name!
     }
     
     public var currentFlowIsDefaultFlow: Bool {
@@ -335,11 +335,9 @@ public class StoryState {
         if _aliveFlowNamesDirty {
             _aliveFlowNames = []
             
-            if _namedFlows != nil {
-                for flowName in _namedFlows.keys {
-                    if flowName != kDefaultFlowName {
-                        _aliveFlowNames.append(flowName)
-                    }
+            for flowName in _namedFlows.keys {
+                if flowName != kDefaultFlowName {
+                    _aliveFlowNames.append(flowName)
                 }
             }
             
@@ -399,12 +397,12 @@ public class StoryState {
         }
         
         guard let flow = _namedFlows[flowName] else {
-            let flow = Flow(flowName, story)
+            let flow = Flow(flowName, story!)
             _namedFlows[flowName] = flow
             _aliveFlowNamesDirty = true
         }
         
-        _currentFlow = _namedFlows[flowName]
+        _currentFlow = _namedFlows[flowName]!
         variablesState?.callStack = _currentFlow.callStack
         
         // Cause text to be regenerated from output stream if necessary
@@ -418,7 +416,7 @@ public class StoryState {
         SwitchFlow_Internal(kDefaultFlowName)
     }
     
-    internal func RemoveFlow_Internal(_ flowName: String) {
+    internal func RemoveFlow_Internal(_ flowName: String) throws {
         if flowName == kDefaultFlowName {
             throw StoryError.cannotDestroyDefaultFlow
         }
@@ -428,7 +426,7 @@ public class StoryState {
             SwitchToDefaultFlow_Internal()
         }
         
-        _namedFlows.remove(flowName)
+        _namedFlows.removeValue(forKey: flowName)
         _aliveFlowNamesDirty = true
     }
     
@@ -438,14 +436,14 @@ public class StoryState {
     // (e.g. we don't edit a StringValue after it's been created and added.)
     // I wonder if there's a sensible way to enforce that...??
     public func CopyAndStartPatching() -> StoryState {
-        var copy = StoryState(story)
+        var copy = StoryState(story!)
         
         copy._patch = StatePatch(_patch)
         
         // Hijack the new default flow to become a copy of our current one
         // If the patch is applied, then this new flow will replace the old one in _namedFlows
         copy._currentFlow.name = _currentFlow.name
-        copy._currentFlow.callStack = CallStack(_currentFlow.callStack)
+        copy._currentFlow.callStack = CallStack(_currentFlow.callStack!)
         copy._currentFlow.currentChoices.append(contentsOf: _currentFlow.currentChoices)
         copy._currentFlow.outputStream.append(contentsOf: _currentFlow.outputStream)
         copy.OutputStreamDirty()
@@ -454,14 +452,12 @@ public class StoryState {
         // except with the current flow replaced with the copy above
         // (Assuming we're in multi-flow mode at all. If we're not then
         // the above copy is simply the default flow copy and we're done)
-        if _namedFlows != nil {
-            copy._namedFlows = [:]
-            for namedFlow in _namedFlows {
-                copy._namedFlows[namedFlow.key] = namedFlow.value
-            }
-            copy._namedFlows[_currentFlow.name] = copy._currentFlow
-            copy._aliveFlowNamesDirty = true
+        copy._namedFlows = [:]
+        for namedFlow in _namedFlows {
+            copy._namedFlows[namedFlow.key] = namedFlow.value
         }
+        copy._namedFlows[_currentFlow.name!] = copy._currentFlow
+        copy._aliveFlowNamesDirty = true
         
         if hasError {
             copy.currentErrors = currentErrors
@@ -480,7 +476,7 @@ public class StoryState {
         
         copy.evaluationStack.append(contentsOf: evaluationStack)
         
-        if !divertedPointer?.isNull {
+        if divertedPointer != nil && !divertedPointer!.isNull {
             copy.divertedPointer = divertedPointer
         }
         
@@ -536,12 +532,12 @@ public class StoryState {
         }
     }
     
-    // TODO: WriteJson()
+    // TODO: COMPLETE FUNCTION BODY
     func WriteJson() {
         
     }
     
-    // TODO: LoadJsonObj()
+    // TODO: COMPLETE FUNCTION BODY
     func LoadJsonObj() {
         
     }
@@ -552,9 +548,9 @@ public class StoryState {
     }
     
     public func ResetOutput(_ objs: [Object]? = nil) {
-        _outputStream = []
+        _currentFlow.outputStream = []
         if objs == nil {
-            _outputStream.append(contentsOf: objs!)
+            _currentFlow.outputStream.append(contentsOf: objs!)
         }
         OutputStreamDirty()
     }
@@ -578,7 +574,7 @@ public class StoryState {
     }
     
     public func PopFromOutputStream(_ count: Int) {
-        outputStream.removeLast(count)
+        _currentFlow.outputStream.removeLast(count)
         OutputStreamDirty()
     }
     
@@ -679,14 +675,154 @@ public class StoryState {
     }
     
     
-    // TODO: PushToOutputStreamIndividual()
     func PushToOutputStreamIndividual(_ obj: Object) {
+        var glue = obj as? Glue
+        var text = obj as? StringValue
         
+        var includeInOutput = true
+        
+        // New glue, so comp away any whitespace from the end of the stream
+        if glue != nil {
+            TrimNewlinesFromOutputStream()
+            includeInOutput = true
+        }
+        
+        // New text: do we really want to append it, if it's whitespace?
+        // Two different reasons for whitespace to be thrown away:
+        // - Function start/end trimming
+        // - User defined glue: <>
+        // We also need to know when to stop trimming, when there's non-whitespace.
+        else if text != nil {
+            // Where does the current function call begin?
+            var functionTrimIndex = -1
+            var currentEl = callStack.currentElement
+            if currentEl.type == .Function {
+                functionTrimIndex = currentEl.functionStartInOuputStream
+            }
+            
+            // Do 2 things:
+            // - Find latest glue
+            // - Check whether we're in the middle of string evaluation
+            // If we're in string eval within the current function, we
+            // don't want to trim back further than the length of the current string.
+            var glueTrimIndex = -1
+            for i in (0 ... outputStream.count - 1).reversed() {
+                var o = outputStream[i]
+                var c = o as? ControlCommand
+                var g = o as? Glue
+                
+                // Find latest glue
+                if g != nil {
+                    glueTrimIndex = i
+                    break
+                }
+                
+                // Don't function-trim past the start of a string evaluation section
+                else if c != nil && c?.commandType == .beginString {
+                    if i >= functionTrimIndex {
+                        functionTrimIndex = -1
+                    }
+                    break
+                }
+            }
+            
+            // Where is the most aggressive (earliest) trim point?
+            var trimIndex = -1
+            if glueTrimIndex != -1 && functionTrimIndex != -1 {
+                trimIndex = min(functionTrimIndex, glueTrimIndex)
+            }
+            else if glueTrimIndex != -1 {
+                trimIndex = glueTrimIndex
+            }
+            else {
+                trimIndex = functionTrimIndex
+            }
+            
+            // So, are we trimming then?
+            if trimIndex != -1 {
+                // Whiletrimming, we want to throw all newlines away,
+                // whether due to glue or the start of a function
+                if text!.isNewline {
+                    includeInOutput = false
+                }
+                
+                // Able to completely reset when normal text is pushed
+                else if text!.isNonWhitespace {
+                    if glueTrimIndex > -1 {
+                        RemoveExistingGlue()
+                    }
+                    
+                    // Tell all functions in callstack that we have seen proper text,
+                    // so trimming whitespace at the start is done.
+                    if functionTrimIndex > -1 {
+                        var callstackElements = callStack.elements
+                        for i in (0 ... callstackElements.count - 1).reversed() {
+                            var el = callstackElements[i]
+                            if el.type == .Function {
+                                el.functionStartInOuputStream = -1
+                            }
+                            else {
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // De-duplicate newlines, and don't ever lead with a newline
+            else if text!.isNewline {
+                if outputStreamEndsInNewLine || !outputStreamContainsContent {
+                    includeInOutput = false
+                }
+            }
+        }
+        
+        if includeInOutput {
+            _currentFlow.outputStream.append(obj)
+            OutputStreamDirty()
+        }
     }
     
-    // TODO: TrimNewlinesFromOutputStream()
     func TrimNewlinesFromOutputStream() {
+        var removeWhitespaceFrom = -1
         
+        // Work back from the end, and try to find the point where
+        // we need to start removing content.
+        // - Simply work backwards to find the first newline in a string of whitespace
+        // e.g. This is the content   \n   \n\n
+        //                            ^---------^ whitespace to remove
+        //                        ^--- first while loop stops here
+        var i = outputStream.count - 1
+        while i >= 0 {
+            var obj = outputStream[i]
+            var cmd = obj as? ControlCommand
+            var txt = obj as? StringValue
+            
+            if cmd != nil || (txt != nil && txt!.isNonWhitespace) {
+                break
+            }
+            
+            else if (txt != nil && txt!.isNewline) {
+                removeWhitespaceFrom = i
+            }
+            
+            i -= 1
+        }
+        
+        // Remove the whitespace
+        if removeWhitespaceFrom >= 0 {
+            i = removeWhitespaceFrom
+            while i < outputStream.count {
+                if let text = outputStream[i] as? StringValue{
+                    _currentFlow.outputStream.remove(at: i)
+                }
+                else {
+                    i += 1
+                }
+            }
+        }
+        
+        OutputStreamDirty()
     }
     
     func RemoveExistingGlue() {
@@ -803,9 +939,38 @@ public class StoryState {
         didSafeExit = true
     }
     
-    // TODO: TrimWhitespaceFromFunctionEnd()
     func TrimWhitespaceFromFunctionEnd() {
+        assert(callStack.currentElement.type == .Function)
         
+        var functionStartPoint = callStack.currentElement.functionStartInOuputStream
+        
+        // If the start point has become -1, it means that some non-whitespace
+        // text has been pushed, so it's safe to go as far back as we're able.
+        if functionStartPoint == -1 {
+            functionStartPoint = 0
+        }
+        
+        // Trim whitespace from END of function call
+        for i in (functionStartPoint ... outputStream.count - 1).reversed() {
+            var obj = outputStream[i]
+            var txt = obj as? StringValue
+            var cmd = obj as? ControlCommand
+            
+            if txt == nil {
+                continue
+            }
+            if cmd != nil {
+                break
+            }
+            
+            if txt!.isNewline || txt!.isInlineWhitespace {
+                _currentFlow.outputStream.remove(at: i)
+                OutputStreamDirty()
+            }
+            else {
+                break
+            }
+        }
     }
     
     public func PopCallstack(_ popType: PushPopType? = nil) {
@@ -862,9 +1027,67 @@ public class StoryState {
         return false
     }
     
-    // TODO: CompleteFunctionEvaluationFromGame()
-    public func CompleteFunctionEvaluationFromGame() -> Any? {
+    public func CompleteFunctionEvaluationFromGame() throws -> Any? {
+        if callStack.currentElement.type != .FunctionEvaluationFromGame {
+            throw StoryError.expectedExternalFunctionEvaluationComplete(stackTrace: callStack.callStackTrace)
+        }
         
+        var originalEvaluationStackHeight = callStack.currentElement.evaluationStackHeightWhenPushed
+        
+        // Do we have a returned value?
+        // Potentially pop multiple values off the stack, in case we need
+        // to clean up after ourselves (e.g. caller of EvaluateFunction may
+        // have passed too many arguments, and we currently have no way to check for that)
+        var returnedObj: Object? = nil
+        while evaluationStack.count > originalEvaluationStackHeight {
+            var poppedObj = PopEvaluationStack()
+            if returnedObj == nil {
+                returnedObj = poppedObj
+            }
+        }
+        
+        // Finally, pop the external function evaluation
+        PopCallstack(.FunctionEvaluationFromGame)
+        
+        // What did we get back?
+        if returnedObj != nil {
+            if returnedObj is Void {
+                return nil
+            }
+            
+            // Some kind of value, if not void
+            var returnVal = returnedObj as! (any BaseValue)
+            
+            // DivertTargets get returned as the string of components
+            // (rather than a Path, which isn't public)
+            if returnVal.valueType == .DivertTarget {
+                return (returnVal as! DivertTargetValue).value?.description
+            }
+            
+            // Xcode gets angry if I try ot return returnVal.value (generic type)
+            // without casting first, so I have to do this...
+            // There's probably a beter way.
+            if let intVal = returnVal as? IntValue {
+                return intVal.value
+            }
+            else if let boolVal = returnVal as? BoolValue {
+                return boolVal.value
+            }
+            else if let floatVal = returnVal as? FloatValue {
+                return floatVal.value
+            }
+            else if let stringVal = returnVal as? StringValue {
+                return stringVal.value
+            }
+            else if let listVal = returnVal as? ListValue {
+                return listVal.value
+            }
+            else if let ptrVal = returnVal as? VariablePointerValue {
+                return ptrVal.value
+            }
+        }
+        
+        return nil
     }
     
     public func AddError(_ message: String, isWarning: Bool) {
