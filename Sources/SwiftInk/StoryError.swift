@@ -29,4 +29,17 @@ enum StoryError: Error {
     case invalidArgument(argName: String)
     
     case expectedExternalFunctionEvaluationComplete(stackTrace: String)
+    
+    case inkVersionNotFound
+    case storyInkVersionIsNewer
+    case storyInkVersionTooOld
+    case rootNodeNotFound
+    
+    case cannotSwitchFlowDueToBackgroundSavingMode(flowName: String)
+    
+    case cannotContinue
+    
+    case errorsOnContinue(_ sb: String)
+    
+    case cantSaveOnBackgroundThreadTwice
 }

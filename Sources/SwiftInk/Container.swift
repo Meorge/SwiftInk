@@ -216,7 +216,7 @@ public class Container: Object, Nameable {
         }
     }
     
-    public func ContentAtPath(_ path: Path, _ partialPathStart: Int = 0, _ partialPathLength: Int = -1) -> SearchResult {
+    public func ContentAtPath(_ path: Path, partialPathStart: Int = 0, partialPathLength: Int = -1) -> SearchResult {
         var partialPathLength = partialPathLength
         if partialPathLength == -1 {
             partialPathLength = path.length
