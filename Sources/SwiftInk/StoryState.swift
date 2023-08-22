@@ -908,7 +908,7 @@ public class StoryState {
         evaluationStack.last
     }
     
-    public func PopEvlauationStack(_ numberOfObjects: Int) throws -> [Object?] {
+    public func PopEvaluationStack(_ numberOfObjects: Int) throws -> [Object?] {
         if numberOfObjects > evaluationStack.count {
             throw StoryError.poppingTooManyObjects
         }

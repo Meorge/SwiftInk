@@ -824,7 +824,785 @@ public class Story: Object {
     var _prevContainers: [Container] = []
     
     // TODO: VisitChangedContainersDueToDivert() and onwards!
+    func VisitChangedContainersDueToDivert() {
+        var previousPointer = state.previousPointer
+        var pointer = state.currentPointer
+        
+        // Unless we're pointing *directly* at a piece of content, we don't do
+        // counting here. Otherwise, the main stepping function will do the counting.
+        if pointer.isNull || pointer.index == -1 {
+            return
+        }
+        
+        // First, find the previously open set of containers
+        _prevContainers = []
+        if !previousPointer.isNull {
+            var prevAncestor = previousPointer.Resolve() as? Container ?? previousPointer.container
+            while prevAncestor != nil {
+                _prevContainers.append(prevAncestor!)
+                prevAncestor = prevAncestor!.parent as? Container
+            }
+        }
+        
+        // If the new object is a container itself, it will be visited automatically at the next actual
+        // content step. However, we need to walk up the new ancestry to see if there are more new containers
+        var currentChildOfContainer = pointer.Resolve()
+        
+        // Invalid pointer? May happen if attempting to...(???)
+        if currentChildOfContainer == nil {
+            return
+        }
+        
+        var currentContainerAncestor = currentChildOfContainer?.parent as? Container
+        
+        var allChildrenEnteredAtStart = true
+        while currentContainerAncestor != nil && (_prevContainers.contains(currentContainerAncestor!) || currentContainerAncestor!.countingAtStartOnly) {
+            // Check whether this ancestor container is being entered at the start,
+            // by checking whether the child object is the first.
+            var enteringAtStart = currentContainerAncestor!.content.count > 0 && currentChildOfContainer == currentContainerAncestor!.content[0] && allChildrenEnteredAtStart
+            
+            // Don't count it as entering at start if we're entering random somewhere within
+            // a container B that happens to be nested at index 0 of container A. It only counts
+            // if we're diverting directly to the first leaf node.
+            if !enteringAtStart {
+                allChildrenEnteredAtStart = false
+            }
+            
+            // Mark a visit to this container
+            VisitContainer(currentContainerAncestor!, enteringAtStart)
+            
+            currentChildOfContainer = currentContainerAncestor
+            currentContainerAncestor = currentContainerAncestor!.parent as? Container
+        }
+    }
     
+    func PopChoiceStringAndTags(_ tags: inout [String]?) -> String? {
+        var choiceOnlyStrVal = state.PopEvaluationStack() as! StringValue
+        
+        while state.evaluationStack.count > 0 && state.PeekEvaluationStack() is Tag {
+            if tags == nil {
+                tags = []
+            }
+            var tag = state.PopEvaluationStack() as! Tag
+            tags?.insert(tag.text, at: 0) // popped in reverse order
+        }
+        
+        return choiceOnlyStrVal.value
+    }
+    
+    func ProcessChoice(_ choicePoint: ChoicePoint) -> Choice? {
+        var showChoice = true
+        
+        // Don't create choice if choice point doesn't pass conditional
+        if choicePoint.hasCondition {
+            var conditionValue = state.PopEvaluationStack()
+            if !IsTruthy(conditionValue!) {
+                showChoice = false
+            }
+        }
+        
+        var startText = ""
+        var choiceOnlyText = ""
+        var tags: [String]? = nil
+        
+        if choicePoint.hasChoiceOnlyContent {
+            choiceOnlyText = PopChoiceStringAndTags(&tags)
+        }
+        
+        if choicePoint.hasStartContent {
+            startText = PopChoiceStringAndTags(&tags)
+        }
+        
+        // Don't create choice if player has already read this content
+        if choicePoint.onceOnly {
+            var visitCount = state.VisitCountForContainer(choicePoint.choiceTarget)
+            if visitCount > 0 {
+                showChoice = false
+            }
+        }
+        
+        // We go through the full process of creating the choice above so
+        // that we consume the content for it, since otherwise it'll
+        // be shown on the output stream.
+        if !showChoice {
+            return nil
+        }
+        
+        var choice = Choice()
+        choice.targetPath = choicePoint.pathOnChoice
+        choice.sourcePath = choicePoint.path.description
+        choice.isInvisibleDefault = choicePoint.isInvisibleDefault
+        choice.tags = tags
+        
+        // We need to capture the state of the callstack at the point where
+        // the choice was generated, since after the generation of this choice
+        // we may go on to pop out from a tunnel (possible if the choice was
+        // wrapped in a conditional), or we may pop out from a thread,
+        // at which point that thread is discarded.
+        // Fork clones the thread, gives it a new ID, but without affecting
+        // the thread stack itself.
+        choice.threadAtGeneration = state.callStack.ForkThread()
+        
+        // Set final text for the choice
+        choice.text = (startText + choiceOnlyText).trimmingCharacters(in: [" ", "\t"])
+        
+        return choice
+    }
+    
+    // Does the expression result represented by this object evaluate to true?
+    // e.g. is it a Number that's not equal to 1?
+    func IsTruthy(_ obj: Object) -> Bool {
+        if let val = obj as? (any BaseValue) {
+            if let divTarget = val as? DivertTargetValue {
+                Error("Shouldn't use a divert target (to \(divTarget.targetPath)) as a conditional value. Did you intend a function call likeThis() or a read count check likeThis? (no arrows)")
+                return false
+            }
+            
+            return val.isTruthy
+        }
+        return false
+    }
+    
+    /// Checks whether `contentObj` is a control or flow object rather than a piece of content,
+    /// and performs the required command if necessary.
+    /// - Returns: `true` if an object was logic or flow control, `false` if it was normal content.
+    /// - Parameter contentObj: Content object.
+    ///
+    func PerformLogicAndFlowControl(_ contentObj: Object?) throws -> Bool {
+        if contentObj == nil {
+            return false
+        }
+        
+        
+        // Divert
+        if let currentDivert = contentObj as? Divert {
+            if currentDivert.isConditional {
+                var conditionValue = state.PopEvaluationStack()
+                
+                // False conditional? Cancel divert
+                if !IsTruthy(conditionValue) {
+                    return true
+                }
+            }
+            
+            if currentDivert.hasVariableTarget {
+                var varName = currentDivert.variableDivertName
+                var varContents = state.variablesState?.GetVariableWithName(varName)
+                if varContents == nil {
+                    Error("Tried to divert using a target from a variable that could not be found (\(varName))")
+                }
+                else if !(varContents is DivertTargetValue) {
+                    var errorMessage = "Tried to divert to a target from a variable, but the variable (\(varName)) didn't contain a divert target, it "
+                    if let intContent = varContents as? IntValue {
+                        errorMessage += "was empty/null (the value 0)."
+                    }
+                    else {
+                        errorMessage += "contained '\(varContents!)'."
+                    }
+                    
+                    Error(errorMessage)
+                }
+                
+                var target = varContents as! DivertTargetValue
+                state.divertedPointer = PointerAtPath(target.targetPath)
+            }
+            
+            else if currentDivert.isExternal {
+                CallExternalFunction(currentDivert.targetPathString, currentDivert.externalArgs)
+                return true
+            }
+            else {
+                state.divertedPointer = currentDivert.targetPointer
+            }
+            
+            if currentDivert.pushesToStack {
+                state.callStack.Push(currentDivert.stackPushType!, outputStreamLengthWithPushed: state.outputStream.count)
+            }
+            
+            if (state.divertedPointer?.isNull ?? false) && !currentDivert.isExternal {
+                // Human-readable name available - runtime divert is part of a hand-written divert that to missing content
+                if currentDivert.debugMetadata?.sourceName != nil {
+                    Error("Divert target doesn't exist: \(currentDivert.debugMetadata.sourceName)")
+                }
+                else {
+                    Error("Divert resolution failed: \(currentDivert)")
+                }
+            }
+            
+            return true
+        }
+        
+        // Start/end an expression evaluation? Or print out the result?
+        else if let evalCommand = contentObj as? ControlCommand {
+            switch evalCommand.commandType {
+            case .evalStart:
+                assert(!state.inExpressionEvaluation, "Already in expression evaluation?")
+                state.inExpressionEvaluation = true
+                break
+            case .evalEnd:
+                assert(state.inExpressionEvaluation, "Not in expression evaluation mode")
+                state.inExpressionEvaluation = false
+                break
+            case .evalOutput:
+                // If the expression turned out to be empty, there may not be anything on the stack
+                if !state.evaluationStack.isEmpty {
+                    var output = state.PopEvaluationStack()
+                    
+                    // Functions may evaluate to Void, in which case we skip output
+                    if !(output is Void) {
+                        // TODO: Should we really always blanket convert to string?
+                        // It would be okay to have numbers in the output stream, the
+                        // only problem is when exporting text for viewing, it skips over numbers etc.
+                        var text = StringValue(String(describing: output))
+                        state.PushToOutputStream(text)
+                    }
+                }
+                break
+            case .noOp:
+                break
+            case .duplicate:
+                state.PushEvaluationStack(state.PeekEvaluationStack())
+                break
+            case .popEvaluatedValue:
+                state.PopEvaluationStack()
+                break
+            case .popFunction:
+                fallthrough
+            case .popTunnel:
+                var popType = evalCommand.commandType == .popFunction ? PushPopType.Function : PushPopType.Tunnel
+                
+                // Tunnel onwards is allowed to specify an optional override
+                // divert to go to immediately after returning: ->-> target
+                var overrideTunnelReturnTarget: DivertTargetValue? = nil
+                if popType == .Tunnel {
+                    var popped = state.PopEvaluationStack()
+                    overrideTunnelReturnTarget = popped as? DivertTargetValue
+                    if overrideTunnelReturnTarget == nil {
+                        Assert(popped is Void, "Expected void if ->-> doesn't override target")
+                    }
+                }
+                
+                if state.TryExitFunctionEvaluationFromGame() {
+                    break
+                }
+                else if state.callStack.currentElement.type != popType || !state.callStack.canPop {
+                    var names: [PushPopType: String] = [:]
+                    names[.Function] = "function return statement (~ return)"
+                    names[.Tunnel] = "tunnel onwards statement (->->)"
+                    
+                    var expected = names[state.callStack.currentElement.type]
+                    if !state.callStack.canPop {
+                        expected = "end of flow (-> END or choice)"
+                    }
+                    
+                    var errorMsg = "Found \(names[popType]), when expected \(expected)"
+                    Error(errorMsg)
+                }
+                
+                else {
+                    state.PopCallstack()
+                    
+                    // Does tunnel onwards override by diverting to a new ->-> target?
+                    if overrideTunnelReturnTarget != nil {
+                        state.divertedPointer = PointerAtPath(overrideTunnelReturnTarget?.targetPath)
+                    }
+                }
+                
+                break
+            case .beginString:
+                state.PushToOutputStream(evalCommand)
+                
+                assert(state.inExpressionEvaluation, "Expected to be in an expression when evaluating a string")
+                state.inExpressionEvaluation = false
+                break
+                
+            // Leave it to story.currentText and story.currentTags to sort out the text from the tags.
+            // This is mostly because we can't always rely on the existence of endTag, and we don't want
+            // to try and flatten dynamic tags to strings every time \n is pushed to output.
+            case .beginTag:
+                state.PushToOutputStream(evalCommand)
+                break
+                
+            case .endTag:
+                // EndTag has 2 modes:
+                // - When in string evaluation (for choices)
+                // - Normal
+                //
+                // The only way you could have an EndTag in the middle of
+                // string evaluation is if we're currently generating text for a
+                // choice, such as:
+                //
+                //    + choice # tag
+                //
+                // In the above case, the ink will be run twice:
+                // - First, to generate the choice text. String evaluation
+                //   will be on, and the final string will be pushed to the
+                //   evaluation stack, ready to be popped to make a Choice
+                //   object.
+                // - Second, when ink generates text after choosing the choice.
+                //   On this occasion, it's not in string evaluation mode.
+                //
+                // On the writing side, we disallow manually putting tags within
+                // strings like this:
+                //
+                //    {"hello # world"}
+                //
+                // So we know that the tag must be being generated as part of
+                // choice content. Therefore, when the tag has been generated,
+                // we push it onto the evaluation stack in the exact same way
+                // as the string for the choice content.
+                if state.inStringEvaluation {
+                    var contentStackForTag: [Object] = []
+                    var outputCountConsumed = 0
+                    
+                    for i in (0...state.outputStream.count - 1).reversed() {
+                        var obj = state.outputStream[i]
+                        
+                        outputCountConsumed += 1
+                        
+                        if let command = obj as? ControlCommand {
+                            if command.commandType == .beginTag {
+                                break
+                            }
+                            else {
+                                Error("Unexpected ControlCommand while extracting tag from choice")
+                                break
+                            }
+                        }
+                        
+                        if obj is StringValue {
+                            contentStackForTag.append(obj)
+                        }
+                    }
+                    
+                    // Consume the content that was produced for this string
+                    state.PopFromOutputStream(outputCountConsumed)
+                    
+                    var sb = ""
+                    for strVal in contentStackForTag.map({ $0 as! StringValue }) {
+                        sb += strVal.value
+                    }
+                    
+                    var choiceTag = Tag(state.CleanOutputWhitespace(sb))
+                    
+                    // Pushing to the evaluation stack means it gets picked up
+                    // when a Choice is generated from the next Choice Point.
+                    state.PushEvaluationStack(choiceTag)
+                }
+                
+                // Otherwise! Simply push endTag, so that in the output stream we
+                // have a structure of: [BeginTag, "the tag content", EndTag]
+                else {
+                    state.PushToOutputStream(evalCommand)
+                }
+                break
+                
+            // Dynamic strings and tags are built in the same way
+            case .endString:
+                // Since we're iterating backward through the content,
+                // build a stack so that when we build the string,
+                // it's in the right order
+                var contentStackForString: [Object] = []
+                var contentToRetain: [Object] = []
+                
+                var outputCountConsumed = 0
+                for i in (0...state.outputStream.count - 1).reversed() {
+                    var obj = state.outputStream[i]
+                    
+                    outputCountConsumed += 1
+                    
+                    if let command = obj as? ControlCommand, command.commandType == .beginString {
+                        break
+                    }
+                    
+                    if obj is Tag {
+                        contentToRetain.append(obj)
+                    }
+                    
+                    if obj is StringValue {
+                        contentStackForString.append(obj)
+                    }
+                }
+                
+                // Consume the content that was produced for this string
+                state.PopFromOutputStream(outputCountConsumed)
+                
+                // Rescue the tags that we want actually to keep on the output stack
+                // rather than consume as part of the string we're building.
+                // At the time of writing, this only applies to Tag objects generated
+                // by choices, which are pushed to the stack during string generation.
+                for rescuedTag in contentToRetain {
+                    state.PushToOutputStream(rescuedTag)
+                }
+                
+                // Build string out of the content we collected
+                var sb = ""
+                for c in contentStackForString {
+                    sb += String(describing: c)
+                }
+                
+                // Return to expression evaluation (from content mode)
+                state.inExpressionEvaluation = true
+                state.PushEvaluationStack(StringValue(sb))
+                break
+                
+            case .choiceCount:
+                var choiceCount = state.generatedChoices.count
+                state.PushEvaluationStack(IntValue(choiceCount))
+                break
+                
+            case .turns:
+                state.PushEvaluationStack(IntValue(state.currentTurnIndex + 1))
+                break
+                
+            case .turnsSince:
+                fallthrough
+                
+            case .readCount:
+                var target = state.PopEvaluationStack()
+                if !(target is DivertTargetValue) {
+                    var extraNote = ""
+                    if target is IntValue {
+                        extraNote = ". Did you accidentally pass a read count ('knot_name') instead of a target ('-> knot_name')?"
+                    }
+                    Error("TURNS_SINCE expected a divert target (knot, stitch, label name), but saw \(target)\(extraNote)")
+                    break
+                }
+                
+                var divertTarget = target as! DivertTargetValue
+                var eitherCount = 0 // value not explicitly defined in C# code, so I assume it defaults to 0?
+                if var container = ContentAtPath(divertTarget.targetPath)?.correctObj as? Container {
+                    if evalCommand.commandType == .turnsSince {
+                        eitherCount = state.TurnsSinceForContainer(container)
+                    }
+                    else {
+                        eitherCount = state.VisitCountForContainer(container)
+                    }
+                }
+                else {
+                    if evalCommand.commandType == .turnsSince {
+                        eitherCount = -1 // turn count, default to never/unknown
+                    }
+                    else {
+                        eitherCount = 0 // visit count, assume 0 to default to allowing entry
+                    }
+                    
+                    Warning("Failed to find container for \(evalCommand) lookup at \(divertTarget.targetPath)")
+                }
+                
+                state.PushEvaluationStack(IntValue(eitherCount))
+                break
+                
+            case .random:
+                guard var maxInt = state.PopEvaluationStack() as? IntValue else {
+                    Error("Invalid value for maximum parameter of RANDOM(min, max)")
+                }
+                
+                guard var minInt = state.PopEvaluationStack() as? IntValue else {
+                    Error("Invalid value for minimum parameter of RANDOM(min, max)")
+                }
+                
+                // +1 because it's inclusive of min and max, for e.g. RANDOM(1,6) for a dice roll.
+                var randomRange: Int
+                do {
+                    randomRange = checked(maxInt.value! - minInt.value! + 1)
+                }
+                catch {
+                    randomRange = Int.max
+                    Error("RANDOM() was called with a range that exceeds the size that ink numbers can use.")
+                }
+                if randomRange <= 0 {
+                    Error("RANDOM() was called with minimum as \(minInt.value!) and maximum as \(maxInt.value!). The maximum must be larger")
+                }
+                
+                var resultSeed = state.storySeed + state.previousRandom
+                var random = Random(resultSeed)
+                
+                var nextRandom = random.Next()
+                var chosenValue = (nextRandom % randomRange) + minInt.value!
+                state.PushEvaluationStack(IntValue(chosenValue))
+                
+                // Next random number (rather than keeping the Random object around)
+                state.previousRandom = nextRandom
+                break
+                
+            case .seedRandom:
+                guard let seed = state.PopEvaluationStack() as? IntValue else {
+                    Error("Invalid value passed to SEED_RANDOM()")
+                }
+                
+                // Story seed affects both RANDOM and shuffle behavior
+                state.storySeed = seed.value
+                state.previousRandom = 0
+                
+                // SEED_RANDOM returns nothing
+                state.PushEvaluationStack(Void())
+                break
+                
+            case .visitIndex:
+                var count = state.VisitCountForContainer(state.currentPointer.container) - 1 // index not count
+                state.PushEvaluationStack(IntValue(count))
+                break
+                
+            case .sequenceShuffleIndex:
+                var shuffleIndex = NextSequenceShuffleIndex()
+                state.PushEvaluationStack(IntValue(shuffleIndex))
+                break
+                
+            case .startThread:
+                // Handled in main step function
+                break
+                
+            case .done:
+                // We may exist in the context of the initial
+                // act of creating the thread, or in the context of
+                // evaluating the content.
+                if state.callStack.canPopThread {
+                    state.callStack.PopThread()
+                }
+                
+                // In normal flow - allow safe exit without warning
+                else {
+                    state.didSafeExit = true
+                    
+                    // Stop flow in current thread
+                    state.currentPointer = Pointer.Null
+                }
+                
+                break
+                
+            // Force flow to end completely
+            case .end:
+                state.ForceEnd()
+                break
+                
+            case .listFromInt:
+                guard let intVal = state.PopEvaluationStack() as? IntValue else {
+                    throw StoryError.nonIntWhenCreatingListFromNumericalValue
+                }
+                
+                var listNameVal = state.PopEvaluationStack() as! StringValue
+                
+                var generatedListValue: ListValue? = nil
+                
+                if let foundListDef = listDefinitions?.TryListGetDefinition(listNameVal.value!) {
+                    if let foundItem = foundListDef.TryGetItemWithValue(intVal.value!) {
+                        generatedListValue = ListValue(foundItem, intVal.value!)
+                    }
+                }
+                else {
+                    throw StoryError.failedToFindList(called: listNameVal.value!)
+                }
+                
+                if generatedListValue == nil {
+                    generatedListValue = ListValue()
+                }
+                
+                state.PushEvaluationStack(generatedListValue)
+                break
+                
+            case .listRange:
+                var max = state.PopEvaluationStack() as? BaseValue
+                var min = state.PopEvaluationStack() as? BaseValue
+                
+                var targetList = state.PopEvaluationStack() as? ListValue
+                
+                if targetList == nil || min == nil || max == nil {
+                    throw StoryError.expectedListMinAndMaxForListRange
+                }
+                
+//                var result = targetList!.value!.ListWithSubrange(min?.value, max?.value)
+                var result: InkList
+                state.PushEvaluationStack(ListValue(result))
+                break
+                
+            case .listRandom:
+                guard let listVal = state.PopEvaluationStack() as? ListValue else {
+                    throw StoryError.expectedListForListRandom
+                }
+                
+                var list = listVal.value!
+                
+                var newList: InkList? = nil
+                
+                // List was empty: return empty list
+                if list.count == 0 {
+                    newList = InkList()
+                }
+                
+                // Non-empty source list
+                else {
+                    var resultSeed = state.storySeed + state.previousRandom
+                    var random = Random(resultSeed)
+                    
+                    var nextRandom = random.Next()
+                    var listItemIndex = nextRandom % list.count
+                    
+                    // Iterate through to get the random element
+                    var listEnumerator = list.internalDict.enumerated().makeIterator()
+                    for i in 0 ..< listItemIndex {
+                        listEnumerator.next()
+                    }
+                    var randomItem = listEnumerator.next()!.element
+                    
+                    // Origin list is simply the origin of the one element
+                    newList = InkList(randomItem.key.originName!, self)
+                    newList?.internalDict[randomItem.key] = randomItem.value
+                    
+                    state.previousRandom = nextRandom
+                }
+                
+                state.PushEvaluationStack(ListValue(newList!))
+                break
+                
+            default:
+                Error("unhandled ControlCommand: \(evalCommand)")
+                break
+            }
+            
+            return true
+        }
+        
+        // Variable assignment
+        else if let varAss = contentObj as? VariableAssignment {
+            var assignedVal = state.PopEvaluationStack()
+            
+            // When in temporary evaluation, don't create new variables purely within
+            // the temporary context, but attempt to create them globally
+            // var prioritiseHigherInCallstack = _temporaryEvaluationContainer != nil
+            
+            state.variablesState?.Assign(varAss, assignedVal)
+            return true
+        }
+        
+        // Variable reference
+        else if let varRef = contentObj as? VariableReference {
+            var foundValue: Object? = nil
+            
+            // Explicit read count value
+            if varRef.pathForCount != nil {
+                var container = varRef.containerForCount
+                var count = state.VisitCountForContainer(container!)
+                foundValue = IntValue(count)
+            }
+            
+            // Normal variable reference
+            else {
+                foundValue = state.variablesState?.GetVariableWithName(varRef.name)
+                
+                if foundValue == nil {
+                    Warning("Variable not found: '\(varRef.name)'. Using default value of 0 (false). This can happen with temporary variables if the declaration hasn't yet been hit. Globals are always given a default value on load if a value doesn't exist in the save state.")
+                    foundValue = IntValue(0)
+                }
+            }
+            
+            state.PushEvaluationStack(foundValue!)
+            return true
+        }
+        
+        // Native function call
+        else if let function = contentObj as? NativeFunctionCall {
+            var funcParams = try state.PopEvaluationStack(function.numberOfParameters)
+            var result = function.Call(funcParams)
+            state.PushEvaluationStack(result)
+            return true
+        }
+        
+        // No control content, must be ordinary content
+        return false
+    }
+    
+    /// Change the current position of the story to the given path. From here, you can
+    /// call `Continue()` to evaluate the next line.
+    ///
+    /// The path string is a dot-separated path as used internally by the engine.
+    /// These examples should work:
+    ///
+    ///     myKnot
+    ///     myKnot.myStitch
+    ///
+    /// Note however that this won't necessarily work:
+    ///
+    ///     myKnot.myStitch.myLabelledChoice
+    ///
+    /// ...because of the way that content is nested within a weave structure.
+    ///
+    /// By default this will reset the callstack beforehand, which means that any
+    /// tunnels, threads, or functions you were in at the time of calling will be
+    /// discarded. This is different from the behavior of `ChooseChoiceIndex()`, which
+    /// will always keep the callstack, since the choices are known to come from the
+    /// correct state, and known their source thread.
+    ///
+    /// You have the option of passing `false` to the `resetCallstack` parameter if you
+    /// don't want this behavior, and will leave any active threads, tunnels, or
+    /// function calls intact.
+    ///
+    /// This is potentially dangerous! If you're in the middle of a tunnel,
+    /// it'll redirect only the innermost tunnel, meaning that when you tunnel-return
+    /// using `->->`, it'll return to where you were before. This may be what you want, though.
+    /// However, if you're in the middle of a function, `ChoosePathString()` will throw an exception.
+    /// - Parameter path: A dot-separated path string, as specified in the discussion.
+    /// - Parameter resetCallstack: Whether to reset the callstack first.
+    /// - Parameter arguments: Optional set of arguments to pass, if path is to a knot that takes them.
+    public func ChoosePathString(_ path: String, resetCallstack: Bool = true, _ arguments: Any?...) throws {
+        IfAsyncWeCant("call ChoosePathString right now")
+        if onChoosePathString != nil {
+            onChoosePathString(path, arguments)
+        }
+        if resetCallstack {
+            ResetCallstack()
+        }
+        else {
+            // ChoosePathString is potentially dangerous since you can call it when the stack is
+            // pretty much in any state. Let's catch one of the worst offenders.
+            if state.callStack.currentElement.type == .Function {
+                var funcDetail = ""
+                if let container = state.callStack.currentElement.currentPointer.container {
+                    funcDetail = "(\(container.path.description)) "
+                }
+                throw StoryError.choosePathStringCalledDuringFunction(funcDetail: funcDetail, pathString: path.description, stackTrace: state.callStack.callStackTrace)
+            }
+        }
+        
+        try state.PassArgumentsToEvaluationStack(arguments)
+        ChoosePath(Path(path))
+    }
+    
+    func IfAsyncWeCant(_ activityStr: String) throws {
+        if _asyncContinueActive {
+            throw StoryError.cannotPerformActionBecauseAsync(activityStr: activityStr)
+        }
+    }
+    
+    public func ChoosePath(_ p: Path, incrementingTurnIndex: Bool = true) {
+        state.SetChosenPath(p, incrementingTurnIndex)
+        
+        // Take a note of newly visited containers for read counts etc
+        VisitChangedContainersDueToDivert()
+    }
+    
+    /// Chooses the `Choice` from the `currentChoices` array with the given
+    /// index. Internally, this sets the current content path to that
+    /// pointed to by the `Choice`, ready to continue story evaluation.
+    public func ChooseChoiceIndex(_ choiceIdx: Int) {
+        var choices = currentChoices
+        assert(choiceIdx >= 0 && choiceIdx < choices.count, "choice out of range")
+        
+        // Replace callstack with the one from the thread at the choosing point,
+        // so that we can jump into the right place in the flow.
+        // This is important in case the flow was forked by a new thread, which
+        // can create multiple leading edges for the story, each of
+        // which has its own context.
+        var choiceToChoose = choices[choiceIdx]
+        if onMakeChoice != nil {
+            onMakeChoice(choiceToChoose)
+        }
+        state.callStack.currentThread = choiceToChoose.threadAtGeneration
+        
+        ChoosePath(choiceToChoose.targetPath!)
+    }
+    
+    // Stopped at HasFunction (line 1804)
     
     private var _mainContentContainer: Container?
     private var _listDefinitions: ListDefinitionsOrigin?

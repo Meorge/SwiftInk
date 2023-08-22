@@ -159,7 +159,7 @@ public class VariablesState: Sequence {
         throw StoryError.unsupportedRuntimeObjectType(valType: String(describing: type(of: obj1)))
     }
     
-    public func GetVariableWithName(_ name: String) -> Object? {
+    public func GetVariableWithName(_ name: String?) -> Object? {
         GetVariableWithName(name, -1)
     }
     
@@ -178,14 +178,19 @@ public class VariablesState: Sequence {
         return varValue
     }
     
-    func GetRawVariableWithName(_ name: String, _ contextIndex: Int) -> Object? {
+    func GetRawVariableWithName(_ name: String?, _ contextIndex: Int) -> Object? {
+        // I added this just in case, seems like it would make sense. -- Malcolm
+        if name == nil {
+            return nil
+        }
+        
         // 0 context = global
         if contextIndex == 0 || contextIndex == -1 {
-            if let varValue = patch?.globals[name] {
+            if let varValue = patch?.globals[name!] {
                 return varValue
             }
             
-            if let varValue = _globalVariables[name] {
+            if let varValue = _globalVariables[name!] {
                 return varValue
             }
             
@@ -194,11 +199,11 @@ public class VariablesState: Sequence {
             // So _defaultGlobalVariables may be nil.
             // We need to do this check though in case a new global is added, so we need to
             // revert to the default globals dictionary since an initial value hasn't yet been set.
-            if let varValue = _defaultGlobalVariables[name] {
+            if let varValue = _defaultGlobalVariables[name!] {
                 return varValue
             }
             
-            if let listItemValue = _listDefsOrigin?.FindSingleItemListWithName(name) {
+            if let listItemValue = _listDefsOrigin?.FindSingleItemListWithName(name!) {
                 return listItemValue
             }
             

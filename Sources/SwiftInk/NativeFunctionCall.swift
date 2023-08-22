@@ -76,7 +76,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
     }
     private var _numberOfParameters: Int
     
-    public func Call(_ parameters: [Object]) throws -> Object? {
+    public func Call(_ parameters: [Object?]) throws -> Object? {
         if _prototype != nil {
             return try _prototype!.Call(parameters)
         }
