@@ -42,4 +42,9 @@ enum StoryError: Error {
     case errorsOnContinue(_ sb: String)
     
     case cantSaveOnBackgroundThreadTwice
+    
+    
+    case genericError(message: String, useEndLineNumber: Bool)
+    case assertionFailure(_ message: String, _ currentDebugMetadata: DebugMetadata?)
+    case shouldntReachHere
 }
