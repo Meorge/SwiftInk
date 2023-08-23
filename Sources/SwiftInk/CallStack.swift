@@ -197,7 +197,7 @@ public class CallStack {
         currentElement.type == .FunctionEvaluationFromGame
     }
     
-    public func Push(_ type: PushPopType, _ externalEvaluationStackHeight: Int = 0, _ outputStreamLengthWithPushed: Int = 0) {
+    public func Push(_ type: PushPopType, externalEvaluationStackHeight: Int = 0, outputStreamLengthWithPushed: Int = 0) {
         // When pushing to callstack, maintain the current content path, but jump out of expressions by default
         var element = Element(type, currentElement.currentPointer, false)
         

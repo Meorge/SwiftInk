@@ -351,8 +351,8 @@ public class Story: Object {
             do {
                 outputStreamEndsInNewline = try ContinueSingleStep()
             }
-            catch {
-                AddError(e)
+            catch let e as StoryError {
+                AddError(String(describing: e))
                 break
             }
             
@@ -1737,7 +1737,7 @@ public class Story: Object {
                 try Assert(fallbackFunctionContainer != nil, "Trying to call EXTERNAL function '\(funcName)' which has not been bound, and fallback ink function could not be found.")
                 
                 // Divert direct into fallback function and we're done
-                state.callStack.Push(.Function, 0, state.outputStream.count)
+                state.callStack.Push(.Function, externalEvaluationStackHeight: 0, outputStreamLengthWithPushed: state.outputStream.count)
                 state.divertedPointer = Pointer.StartOf(fallbackFunctionContainer)
                 return
             }
