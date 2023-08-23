@@ -138,8 +138,8 @@ public class Story: Object {
     
     /// Start recording ink profiling information during calls to `Continue()` on this story.
     /// - Returns: a `Profiler` instance that you can request a report from when you're finished.
-    public func StartProfiling() -> Profiler {
-        IfAsyncWeCant("start profiling")
+    public func StartProfiling() throws -> Profiler {
+        try IfAsyncWeCant("start profiling")
         _profiler = Profiler()
         return _profiler!
     }
@@ -219,14 +219,14 @@ public class Story: Object {
     }
     
     /// Reset the story back to its initial state as it was when it was first constructed.
-    public func ResetState() {
+    public func ResetState() throws {
         // TODO: Could make this possible
-        IfAsyncWeCant("ResetState")
+        try IfAsyncWeCant("ResetState")
         
         _state = StoryState(self)
         _state.variablesState?.variableChangedEvent += VariableStateDidChangeEvent
         
-        ResetGlobals()
+        try ResetGlobals()
     }
     
     func ResetErrors() {
@@ -240,20 +240,20 @@ public class Story: Object {
     /// prematurely and tell it to go elsewhere with a call to `ChoosePathString()`.
     /// Doing so without calling `ResetCallstack()` could cause unexpected
     /// issues if, for example, the story was in a tunnel already.
-    public func ResetCallstack() {
-        IfAsyncWeCant("ResetCallstack")
+    public func ResetCallstack() throws {
+        try IfAsyncWeCant("ResetCallstack")
         _state.ForceEnd()
     }
     
-    func ResetGlobals() {
+    func ResetGlobals() throws {
         if _mainContentContainer?.namedContent.keys.contains("global decl") ?? false {
             var originalPointer = state.currentPointer
             
-            ChoosePath(Path("global decl"), incrementingTurnIndex: false)
+            try ChoosePath(Path("global decl"), incrementingTurnIndex: false)
             
             // Continue, but without validating external bindings,
             // since we may be doing this reset at initialisation time.
-            ContinueInternal()
+            try ContinueInternal()
             
             state.currentPointer = originalPointer
         }
@@ -262,7 +262,7 @@ public class Story: Object {
     }
     
     public func SwitchFlow(_ flowName: String) throws {
-        IfAsyncWeCant("switch flow")
+        try IfAsyncWeCant("switch flow")
         if _asyncSaving {
             throw StoryError.cannotSwitchFlowDueToBackgroundSavingMode(flowName: flowName)
         }
@@ -279,8 +279,8 @@ public class Story: Object {
     /// want to check whether you're at a choice point or the end of the story),
     /// you should call `canContinue` before calling this function.
     /// - Returns: The next line of text content.
-    public func Continue() -> String {
-        ContinueAsync(0)
+    public func Continue() throws -> String {
+        try ContinueAsync(0)
         return currentText
     }
     
@@ -293,7 +293,7 @@ public class Story: Object {
     /// If `ContinueAsync()` was called (with milliseconds limit > 0) then this property
     /// will return `false` if the ink evaluation isn't yet finished, and you need to call
     /// it again in order for the `Continue()` to fully complete.
-    public var asyncContinueComplete {
+    public var asyncContinueComplete: Bool {
         return !_asyncContinueActive
     }
     
@@ -305,11 +305,11 @@ public class Story: Object {
     /// it over multiple game frames for smoother animation.
     /// If you pass a limit of zero, then it will fully evaluate the ink in the same
     /// way as calling `Continue()` (and, in fact, this is exactly what `Continue()` does internally).
-    public func ContinueAsync(_ millisecsLimitAsync: Float) {
+    public func ContinueAsync(_ millisecsLimitAsync: Float) throws {
         if !_hasValidatedExternals {
-            ValidateExternalBindings()
+            try ValidateExternalBindings()
         }
-        ContinueInternal(millisecsLimitAsync)
+        try ContinueInternal(millisecsLimitAsync)
     }
     
     
@@ -349,7 +349,7 @@ public class Story: Object {
         _sawLookaheadUnsafeFunctionAfterNewline = false
         repeat {
             do {
-                outputStreamEndsInNewline = ContinueSingleStep()
+                outputStreamEndsInNewline = try ContinueSingleStep()
             }
             catch {
                 AddError(e)
@@ -460,17 +460,17 @@ public class Story: Object {
         }
     }
     
-    func ContinueSingleStep() -> Bool {
+    func ContinueSingleStep() throws -> Bool {
         _profiler?.PreStep()
         
         // Run main step function (walks through content)
-        Step()
+        try Step()
         
         _profiler?.PostStep()
         
         // Run out of content and we have a default invisible choice that we can follow?
         if !canContinue && !state.callStack.elementIsEvaluateFromGame {
-            TryFollowDefaultInvisibleChoice()
+            try TryFollowDefaultInvisibleChoice()
         }
         
         _profiler?.PreSnapshot()
@@ -496,7 +496,7 @@ public class Story: Object {
                 // Newline that previously existed is no longer valid - e.g.
                 // glue was encountered that caused it to be removed
                 else if change == .newlineRemoved {
-                    DiscardSnapsot()
+                    DiscardSnapshot()
                 }
             }
             
@@ -580,12 +580,12 @@ public class Story: Object {
     /// This is opposed to the `Continue()` method, which only evaluates one line of
     /// output at a time.
     /// - Returns: The resulting text evaluated by the ink engine, concatenated together.
-    public func ContinueMaximally() -> String {
-        IfAsyncWeCant("ContinueMaximally")
+    public func ContinueMaximally() throws -> String {
+        try IfAsyncWeCant("ContinueMaximally")
         
         var sb = ""
         while canContinue {
-            sb += Continue()
+            sb += try Continue()
         }
         
         return sb
@@ -602,7 +602,7 @@ public class Story: Object {
         return nil
     }
     
-    public func PointerAtPath(_ path: Path) -> Pointer {
+    public func PointerAtPath(_ path: Path) throws -> Pointer {
         if path.length == 0 {
             return Pointer.Null
         }
@@ -627,10 +627,10 @@ public class Story: Object {
         }
         
         if result?.obj == nil || result?.obj == _mainContentContainer && pathLengthToUse > 0 {
-            Error("Failed to find content at path '\(path)', and no approximation of it was possible.")
+            try Error("Failed to find content at path '\(path)', and no approximation of it was possible.")
         }
         else if result?.approximate ?? false {
-            Warning("Failed to find content at path '\(path)', so it was approximated to '\(result.obj.path)'")
+            Warning("Failed to find content at path '\(path)', so it was approximated to '\(result?.obj!.path)'")
         }
         
         return p
@@ -687,7 +687,7 @@ public class Story: Object {
     /// in its usual mode.
     /// - Returns: The state for background thread save.
     public func CopyStateForBackgroundThreadSave() throws -> StoryState {
-        IfAsyncWeCant("start saving on a background thread")
+        try IfAsyncWeCant("start saving on a background thread")
         if _asyncSaving {
             throw StoryError.cantSaveOnBackgroundThreadTwice
         }
@@ -716,7 +716,7 @@ public class Story: Object {
         _asyncSaving = false
     }
     
-    func Step() {
+    func Step() throws {
         var shouldAddToStream = true
         
         // Get current content
@@ -729,14 +729,14 @@ public class Story: Object {
         var containerToEnter = pointer.Resolve() as? Container
         while containerToEnter != nil {
             // Mark container as being entered
-            VisitContainer(containerToEnter, atStart: true)
+            try VisitContainer(containerToEnter!, atStart: true)
             
             // No content? the most we can do is step past it
             if containerToEnter?.content.count == 0 {
                 break
             }
             
-            pointer.Pointer.StartOf(containerToEnter!)
+            pointer = Pointer.StartOf(containerToEnter!)
             containerToEnter = pointer.Resolve() as? Container
         }
         state.currentPointer = pointer
@@ -749,7 +749,7 @@ public class Story: Object {
         // Stop flow if we hit a stack pop when we're unable to pop (e.g. return/done statement in knot
         // that was diverted to rather than called as a function)
         var currentContentObj = pointer.Resolve()
-        var isLogicOrFlowControl = PerformLogicAndFlowControl(currentContentObj)
+        var isLogicOrFlowControl = try PerformLogicAndFlowControl(currentContentObj)
         
         // Has flow been forced to end by flow control above?
         if state.currentPointer.isNull {
@@ -762,8 +762,8 @@ public class Story: Object {
         
         // Choice with condition
         if let choicePoint = currentContentObj as? ChoicePoint {
-            if let choice = ProcessChoice(choicePoint) {
-                state.generatedChoices.append(choice)
+            if let choice = try ProcessChoice(choicePoint) {
+                state._currentFlow.currentChoices.append(choice)
             }
             
             currentContentObj = nil
@@ -789,17 +789,17 @@ public class Story: Object {
             
             // Expression evaluation content
             if state.inExpressionEvaluation {
-                state.PushEvaluationStack(currentContentObj)
+                state.PushEvaluationStack(currentContentObj!)
             }
             
             // Output stream content (i.e. not expression evaluation)
             else {
-                state.PushToOutputStream(currentContentObj)
+                state.PushToOutputStream(currentContentObj!)
             }
         }
         
         // Increment the content pointer, following diverts if necessary
-        NextContent()
+        try NextContent()
         
         // Starting a thread should be done after the increment to thecontent pointer,
         // so that when returning from the thread, it returns to the content after this instruction.
@@ -809,22 +809,21 @@ public class Story: Object {
     }
     
     /// Mark a container as having been visited
-    func VisitContainer(_ container: Container, _ atStart: Bool) {
+    func VisitContainer(_ container: Container, atStart: Bool) throws {
         if !container.countingAtStartOnly || atStart {
             if container.visitsShouldBeCounted {
-                state.IncrementVisitCountForContainer(container)
+                try state.IncrementVisitCountForContainer(container)
             }
             
             if container.turnIndexShouldBeCounted {
-                state.RecordTurnIndexVisitToContainer(container)
+                try state.RecordTurnIndexVisitToContainer(container)
             }
         }
     }
     
     var _prevContainers: [Container] = []
     
-    // TODO: VisitChangedContainersDueToDivert() and onwards!
-    func VisitChangedContainersDueToDivert() {
+    func VisitChangedContainersDueToDivert() throws {
         var previousPointer = state.previousPointer
         var pointer = state.currentPointer
         
@@ -869,7 +868,7 @@ public class Story: Object {
             }
             
             // Mark a visit to this container
-            VisitContainer(currentContainerAncestor!, enteringAtStart)
+            try VisitContainer(currentContainerAncestor!, atStart: enteringAtStart)
             
             currentChildOfContainer = currentContainerAncestor
             currentContainerAncestor = currentContainerAncestor!.parent as? Container
@@ -890,13 +889,13 @@ public class Story: Object {
         return choiceOnlyStrVal.value
     }
     
-    func ProcessChoice(_ choicePoint: ChoicePoint) -> Choice? {
+    func ProcessChoice(_ choicePoint: ChoicePoint) throws -> Choice? {
         var showChoice = true
         
         // Don't create choice if choice point doesn't pass conditional
         if choicePoint.hasCondition {
             var conditionValue = state.PopEvaluationStack()
-            if !IsTruthy(conditionValue!) {
+            if try !IsTruthy(conditionValue!) {
                 showChoice = false
             }
         }
@@ -906,16 +905,16 @@ public class Story: Object {
         var tags: [String]? = nil
         
         if choicePoint.hasChoiceOnlyContent {
-            choiceOnlyText = PopChoiceStringAndTags(&tags)
+            choiceOnlyText = PopChoiceStringAndTags(&tags)!
         }
         
         if choicePoint.hasStartContent {
-            startText = PopChoiceStringAndTags(&tags)
+            startText = PopChoiceStringAndTags(&tags)!
         }
         
         // Don't create choice if player has already read this content
         if choicePoint.onceOnly {
-            var visitCount = state.VisitCountForContainer(choicePoint.choiceTarget)
+            var visitCount = try state.VisitCountForContainer(choicePoint.choiceTarget!)
             if visitCount > 0 {
                 showChoice = false
             }
@@ -951,10 +950,10 @@ public class Story: Object {
     
     // Does the expression result represented by this object evaluate to true?
     // e.g. is it a Number that's not equal to 1?
-    func IsTruthy(_ obj: Object) -> Bool {
+    func IsTruthy(_ obj: Object) throws -> Bool {
         if let val = obj as? (any BaseValue) {
             if let divTarget = val as? DivertTargetValue {
-                Error("Shouldn't use a divert target (to \(divTarget.targetPath)) as a conditional value. Did you intend a function call likeThis() or a read count check likeThis? (no arrows)")
+                try Error("Shouldn't use a divert target (to \(divTarget.targetPath)) as a conditional value. Did you intend a function call likeThis() or a read count check likeThis? (no arrows)")
                 return false
             }
             
@@ -980,7 +979,7 @@ public class Story: Object {
                 var conditionValue = state.PopEvaluationStack()
                 
                 // False conditional? Cancel divert
-                if !IsTruthy(conditionValue) {
+                if try !IsTruthy(conditionValue!) {
                     return true
                 }
             }
@@ -989,7 +988,7 @@ public class Story: Object {
                 var varName = currentDivert.variableDivertName
                 var varContents = state.variablesState?.GetVariableWithName(varName)
                 if varContents == nil {
-                    Error("Tried to divert using a target from a variable that could not be found (\(varName))")
+                    try Error("Tried to divert using a target from a variable that could not be found (\(varName))")
                 }
                 else if !(varContents is DivertTargetValue) {
                     var errorMessage = "Tried to divert to a target from a variable, but the variable (\(varName)) didn't contain a divert target, it "
@@ -1000,15 +999,15 @@ public class Story: Object {
                         errorMessage += "contained '\(varContents!)'."
                     }
                     
-                    Error(errorMessage)
+                    try Error(errorMessage)
                 }
                 
                 var target = varContents as! DivertTargetValue
-                state.divertedPointer = PointerAtPath(target.targetPath)
+                state.divertedPointer = try PointerAtPath(target.targetPath)
             }
             
             else if currentDivert.isExternal {
-                CallExternalFunction(currentDivert.targetPathString, currentDivert.externalArgs)
+                try CallExternalFunction(currentDivert.targetPathString!, currentDivert.externalArgs)
                 return true
             }
             else {
@@ -1022,10 +1021,10 @@ public class Story: Object {
             if (state.divertedPointer?.isNull ?? false) && !currentDivert.isExternal {
                 // Human-readable name available - runtime divert is part of a hand-written divert that to missing content
                 if currentDivert.debugMetadata?.sourceName != nil {
-                    Error("Divert target doesn't exist: \(currentDivert.debugMetadata.sourceName)")
+                    try Error("Divert target doesn't exist: \(currentDivert.debugMetadata!.sourceName!)")
                 }
                 else {
-                    Error("Divert resolution failed: \(currentDivert)")
+                    try Error("Divert resolution failed: \(currentDivert)")
                 }
             }
             
@@ -1036,11 +1035,11 @@ public class Story: Object {
         else if let evalCommand = contentObj as? ControlCommand {
             switch evalCommand.commandType {
             case .evalStart:
-                assert(!state.inExpressionEvaluation, "Already in expression evaluation?")
+                try Assert(!state.inExpressionEvaluation, "Already in expression evaluation?")
                 state.inExpressionEvaluation = true
                 break
             case .evalEnd:
-                assert(state.inExpressionEvaluation, "Not in expression evaluation mode")
+                try Assert(state.inExpressionEvaluation, "Not in expression evaluation mode")
                 state.inExpressionEvaluation = false
                 break
             case .evalOutput:
@@ -1061,7 +1060,7 @@ public class Story: Object {
             case .noOp:
                 break
             case .duplicate:
-                state.PushEvaluationStack(state.PeekEvaluationStack())
+                state.PushEvaluationStack(state.PeekEvaluationStack()!)
                 break
             case .popEvaluatedValue:
                 state.PopEvaluationStack()
@@ -1078,7 +1077,7 @@ public class Story: Object {
                     var popped = state.PopEvaluationStack()
                     overrideTunnelReturnTarget = popped as? DivertTargetValue
                     if overrideTunnelReturnTarget == nil {
-                        Assert(popped is Void, "Expected void if ->-> doesn't override target")
+                        try Assert(popped is Void, "Expected void if ->-> doesn't override target")
                     }
                 }
                 
@@ -1096,7 +1095,7 @@ public class Story: Object {
                     }
                     
                     var errorMsg = "Found \(names[popType]), when expected \(expected)"
-                    Error(errorMsg)
+                    try Error(errorMsg)
                 }
                 
                 else {
@@ -1104,7 +1103,7 @@ public class Story: Object {
                     
                     // Does tunnel onwards override by diverting to a new ->-> target?
                     if overrideTunnelReturnTarget != nil {
-                        state.divertedPointer = PointerAtPath(overrideTunnelReturnTarget?.targetPath)
+                        state.divertedPointer = PointerAtPath(overrideTunnelReturnTarget?.targetPath!)
                     }
                 }
                 
@@ -1112,7 +1111,7 @@ public class Story: Object {
             case .beginString:
                 state.PushToOutputStream(evalCommand)
                 
-                assert(state.inExpressionEvaluation, "Expected to be in an expression when evaluating a string")
+                Assert(state.inExpressionEvaluation, "Expected to be in an expression when evaluating a string")
                 state.inExpressionEvaluation = false
                 break
                 
@@ -1180,10 +1179,10 @@ public class Story: Object {
                     
                     var sb = ""
                     for strVal in contentStackForTag.map({ $0 as! StringValue }) {
-                        sb += strVal.value
+                        sb += strVal.value!
                     }
                     
-                    var choiceTag = Tag(state.CleanOutputWhitespace(sb))
+                    var choiceTag = Tag(text: state.CleanOutputWhitespace(sb))
                     
                     // Pushing to the evaluation stack means it gets picked up
                     // when a Choice is generated from the next Choice Point.
@@ -1305,7 +1304,8 @@ public class Story: Object {
                 // +1 because it's inclusive of min and max, for e.g. RANDOM(1,6) for a dice roll.
                 var randomRange: Int
                 do {
-                    randomRange = checked(maxInt.value! - minInt.value! + 1)
+                    // NOTE: Original C# code used checked() here to check for int overflow
+                    randomRange = maxInt.value! - minInt.value! + 1
                 }
                 catch {
                     randomRange = Int.max
@@ -1332,7 +1332,7 @@ public class Story: Object {
                 }
                 
                 // Story seed affects both RANDOM and shuffle behavior
-                state.storySeed = seed.value
+                state.storySeed = seed.value!
                 state.previousRandom = 0
                 
                 // SEED_RANDOM returns nothing
@@ -1340,7 +1340,7 @@ public class Story: Object {
                 break
                 
             case .visitIndex:
-                var count = state.VisitCountForContainer(state.currentPointer.container) - 1 // index not count
+                var count = state.VisitCountForContainer(state.currentPointer.container!) - 1 // index not count
                 state.PushEvaluationStack(IntValue(count))
                 break
                 
@@ -1398,12 +1398,12 @@ public class Story: Object {
                     generatedListValue = ListValue()
                 }
                 
-                state.PushEvaluationStack(generatedListValue)
+                state.PushEvaluationStack(generatedListValue!)
                 break
                 
             case .listRange:
-                var max = state.PopEvaluationStack() as? BaseValue
-                var min = state.PopEvaluationStack() as? BaseValue
+                var max = state.PopEvaluationStack() as? (any BaseValue)
+                var min = state.PopEvaluationStack() as? (any BaseValue)
                 
                 var targetList = state.PopEvaluationStack() as? ListValue
                 
@@ -1411,6 +1411,7 @@ public class Story: Object {
                     throw StoryError.expectedListMinAndMaxForListRange
                 }
                 
+                // TODO: FIX THIS!
 //                var result = targetList!.value!.ListWithSubrange(min?.value, max?.value)
                 var result: InkList
                 state.PushEvaluationStack(ListValue(result))
@@ -1491,7 +1492,7 @@ public class Story: Object {
                 foundValue = state.variablesState?.GetVariableWithName(varRef.name)
                 
                 if foundValue == nil {
-                    Warning("Variable not found: '\(varRef.name)'. Using default value of 0 (false). This can happen with temporary variables if the declaration hasn't yet been hit. Globals are always given a default value on load if a value doesn't exist in the save state.")
+                    Warning("Variable not found: '\(varRef.name!)'. Using default value of 0 (false). This can happen with temporary variables if the declaration hasn't yet been hit. Globals are always given a default value on load if a value doesn't exist in the save state.")
                     foundValue = IntValue(0)
                 }
             }
@@ -1504,7 +1505,7 @@ public class Story: Object {
         else if let function = contentObj as? NativeFunctionCall {
             var funcParams = try state.PopEvaluationStack(function.numberOfParameters)
             var result = function.Call(funcParams)
-            state.PushEvaluationStack(result)
+            state.PushEvaluationStack(result!)
             return true
         }
         
@@ -1545,12 +1546,12 @@ public class Story: Object {
     /// - Parameter resetCallstack: Whether to reset the callstack first.
     /// - Parameter arguments: Optional set of arguments to pass, if path is to a knot that takes them.
     public func ChoosePathString(_ path: String, resetCallstack: Bool = true, _ arguments: Any?...) throws {
-        IfAsyncWeCant("call ChoosePathString right now")
+        try IfAsyncWeCant("call ChoosePathString right now")
         if onChoosePathString != nil {
             onChoosePathString(path, arguments)
         }
         if resetCallstack {
-            ResetCallstack()
+            try ResetCallstack()
         }
         else {
             // ChoosePathString is potentially dangerous since you can call it when the stack is
@@ -1565,7 +1566,7 @@ public class Story: Object {
         }
         
         try state.PassArgumentsToEvaluationStack(arguments)
-        ChoosePath(Path(path))
+        try ChoosePath(Path(path))
     }
     
     func IfAsyncWeCant(_ activityStr: String) throws {
@@ -1574,19 +1575,19 @@ public class Story: Object {
         }
     }
     
-    public func ChoosePath(_ p: Path, incrementingTurnIndex: Bool = true) {
-        state.SetChosenPath(p, incrementingTurnIndex)
+    public func ChoosePath(_ p: Path, incrementingTurnIndex: Bool = true) throws {
+        try state.SetChosenPath(p, incrementingTurnIndex)
         
         // Take a note of newly visited containers for read counts etc
-        VisitChangedContainersDueToDivert()
+        try VisitChangedContainersDueToDivert()
     }
     
     /// Chooses the `Choice` from the `currentChoices` array with the given
     /// index. Internally, this sets the current content path to that
     /// pointed to by the `Choice`, ready to continue story evaluation.
-    public func ChooseChoiceIndex(_ choiceIdx: Int) {
+    public func ChooseChoiceIndex(_ choiceIdx: Int) throws {
         var choices = currentChoices
-        assert(choiceIdx >= 0 && choiceIdx < choices.count, "choice out of range")
+        try Assert(choiceIdx >= 0 && choiceIdx < choices.count, "choice out of range")
         
         // Replace callstack with the one from the thread at the choosing point,
         // so that we can jump into the right place in the flow.
@@ -1597,9 +1598,9 @@ public class Story: Object {
         if onMakeChoice != nil {
             onMakeChoice(choiceToChoose)
         }
-        state.callStack.currentThread = choiceToChoose.threadAtGeneration
+        state.callStack.currentThread = choiceToChoose.threadAtGeneration!
         
-        ChoosePath(choiceToChoose.targetPath!)
+        try ChoosePath(choiceToChoose.targetPath!)
     }
     
     /// Checks if a function exists.
@@ -1629,22 +1630,22 @@ public class Story: Object {
     /// - Parameter functionName: The name of the function as declared in ink.
     /// - Parameter textOutput: The text produced by thefunction via normal ink, if any.
     /// - Parameter arguments: The arguments that the ink function takes, if any. Note that we don't (can't) do any validation on the number of arguments right now, so make sure you get it right!
-    public func EvaluateFunction(_ functionName: String, _ textOutput: inout String, _ arguments: Any?...) -> Any? {
+    public func EvaluateFunction(_ functionName: String?, _ textOutput: inout String, _ arguments: Any?...) throws -> Any? {
         if onEvaluateFunction != nil {
             onEvaluateFunction(functionName, arguments)
         }
-        IfAsyncWeCant("evaluate a function")
+        try IfAsyncWeCant("evaluate a function")
         
         if functionName == nil {
             throw StoryError.nullFunction
         }
-        if functionName == "" || functionName.trimmingCharacters(in: .whitespacesAndNewlines) {
+        if functionName! == "" || functionName!.trimmingCharacters(in: .whitespacesAndNewlines) == "" {
             throw StoryError.functionIsEmptyOrWhitespace
         }
         
         // Get the content that we need to run
-        guard let funcContainer = KnotContainerWithName(functionName) else {
-            throw StoryError.functionDoesntExist(name: functionName)
+        guard let funcContainer = KnotContainerWithName(functionName!) else {
+            throw StoryError.functionDoesntExist(name: functionName!)
         }
         
         // Snapshot the output stream
@@ -1652,12 +1653,12 @@ public class Story: Object {
         _state.ResetOutput()
         
         // State will temporarily replace the callstack in order to evaluate
-        state.StartFunctionEvaluationFromGame(funcContainer, arguments)
+        try state.StartFunctionEvaluationFromGame(funcContainer, arguments)
         
         // Evaluate the function, and collect the string output
         var stringOutput = ""
         while canContinue {
-            stringOutput += Continue()
+            stringOutput += try Continue()
         }
         textOutput = stringOutput
         
@@ -1666,7 +1667,7 @@ public class Story: Object {
         _state.ResetOutput(outputStreamBefore)
         
         // Finish evaluation, and see whether anything was produced
-        var result = state.CompleteFunctionEvaluationFromGame()
+        var result = try state.CompleteFunctionEvaluationFromGame()
         if onCompleteEvaluateFunction != nil {
             onCompleteEvaluateFunction(functionName, arguments, textOutput, result)
         }
@@ -1675,7 +1676,7 @@ public class Story: Object {
     
     // Evaluate a "hot compiled" piece of ink content, as used by the REPL-like
     // CommandLinePlayer.
-    public func EvaluateExpression(_ exprContainer: Container) -> Object? {
+    public func EvaluateExpression(_ exprContainer: Container) throws -> Object? {
         var startCallStackHeight = state.callStack.elements.count
         
         state.callStack.Push(.Tunnel)
@@ -1686,7 +1687,7 @@ public class Story: Object {
         
         var evalStackHeight = state.evaluationStack.count
         
-        Continue()
+        try Continue()
         
         _temporaryEvaluationContainer = nil
         
@@ -1712,13 +1713,13 @@ public class Story: Object {
     /// function, but you don't want it to fail to run.
     public var allowExternalFunctionFallbacks: Bool = false
     
-    public func CallExternalFunction(_ funcName: String, _ numberOfArguments: Int) {
+    public func CallExternalFunction(_ funcName: String, _ numberOfArguments: Int) throws {
         var funcDef: ExternalFunctionDef
         var fallbackFunctionContainer: Container? = nil
         
         let foundExternal = _externals[funcName]
         if foundExternal != nil && !funcDef.lookaheadSafe && state.inStringEvaluation {
-            Error("External function \(funcName) could not be called because 1) it wasn't marked as lookaheadSafe when BindExternalFunction was called and 2) the story is in the middle of string generation, either because text is being generated, or because you have ink like \"hello {func()}\". You can work around this by generating the result of your function into a temporary variable before the string or choice gets generated: '~temp x = \(funcName)()")
+            try Error("External function \(funcName) could not be called because 1) it wasn't marked as lookaheadSafe when BindExternalFunction was called and 2) the story is in the middle of string generation, either because text is being generated, or because you have ink like \"hello {func()}\". You can work around this by generating the result of your function into a temporary variable before the string or choice gets generated: '~temp x = \(funcName)()")
             return
         }
         
@@ -1733,7 +1734,7 @@ public class Story: Object {
         if foundExternal == nil {
             if allowExternalFunctionFallbacks {
                 fallbackFunctionContainer = KnotContainerWithName(funcName)
-                assert(fallbackFunctionContainer != nil, "Trying to call EXTERNAL function '\(funcName)' which has not been bound, and fallback ink function could not be found.")
+                try Assert(fallbackFunctionContainer != nil, "Trying to call EXTERNAL function '\(funcName)' which has not been bound, and fallback ink function could not be found.")
                 
                 // Divert direct into fallback function and we're done
                 state.callStack.Push(.Function, 0, state.outputStream.count)
@@ -1741,13 +1742,13 @@ public class Story: Object {
                 return
             }
             else {
-                assert(false, "Trying to call EXTERNAL function '\(funcName)' which has not been bound (and ink fallbacks disabled).")
+                try Assert(false, "Trying to call EXTERNAL function '\(funcName)' which has not been bound (and ink fallbacks disabled).")
             }
         }
         
         // Pop arguments
         var arguments: [Any?] = []
-        for i in 0 ..< numberOfArguments {
+        for _ in 0 ..< numberOfArguments {
             var poppedObj = state.PopEvaluationStack() as? (any BaseValue)
             // TODO: Figure this thing out argh
 //            arguments.append(poppedObj?.value)
@@ -1764,7 +1765,7 @@ public class Story: Object {
         var returnObj: Object? = nil
         if funcResult != nil {
             returnObj = CreateValue(funcResult)
-            assert(returnObj != nil, "Could not create ink value from returned object of type \(type(of: funcResult))")
+            try Assert(returnObj != nil, "Could not create ink value from returned object of type \(type(of: funcResult))")
         }
         else {
             returnObj = Void()
@@ -1796,11 +1797,11 @@ public class Story: Object {
     /// to be performed in game code when this function is called.
     public func BindExternalFunctionGeneral(_ funcName: String, _ function: @escaping ExternalFunction, lookaheadSafe: Bool = true) throws {
         try IfAsyncWeCant("bind an external function")
-        assert(!_externals.keys.contains(funcName), "Function '\(funcName)' has already been bound.")
+        try Assert(!_externals.keys.contains(funcName), "Function '\(funcName)' has already been bound.")
         _externals[funcName] = ExternalFunctionDef(function: function, lookaheadSafe: lookaheadSafe)
     }
     
-    func TryCoerce<T>(_ value: Any?, to: T.Type) -> Any? {
+    func TryCoerce<T>(_ value: Any?, to: T.Type) throws -> Any? {
         if value == nil {
             return nil
         }
@@ -1829,7 +1830,7 @@ public class Story: Object {
             return value as! String
         }
         
-        assert(false, "Failed to cast \(type(of: value)) to \(T.self)")
+        try Assert(false, "Failed to cast \(type(of: value)) to \(T.self)")
         return nil
     }
     
@@ -1838,12 +1839,11 @@ public class Story: Object {
     /// Remove a binding for a named EXTERNAL ink function.
     public func UnbindExternalFunction(_ funcName: String) throws {
         try IfAsyncWeCant("unbind an external function")
-        assert(_externals.keys.contains(funcName), "Function '\(funcName)' has not been bound.")
+        try Assert(_externals.keys.contains(funcName), "Function '\(funcName)' has not been bound.")
         _externals.removeValue(forKey: funcName)
     }
     
-    public func ValidateExternalBindings()
-    {
+    public func ValidateExternalBindings() throws {
         var missingExternals = Set<String>()
         ValidateExternalBindings(_mainContentContainer!, &missingExternals)
         _hasValidatedExternals = true
@@ -1851,7 +1851,7 @@ public class Story: Object {
         // Error for all missing externals
         if !missingExternals.isEmpty {
             var message = "ERROR: Missing function binding for external\(missingExternals.count > 1 ? "s" : ""): '\(missingExternals.joined(separator: ", "))' \(allowExternalFunctionFallbacks ? ",and now fallback ink function found." : "(ink fallbacks disabled)")"
-            Error(message)
+            try Error(message)
         }
     }
     
@@ -1941,15 +1941,15 @@ public class Story: Object {
         
         // Remove observer for this specific variable
         if specificVariableName != nil {
-            if _variableObservers.keys.contains(specificVariableName) {
+            if _variableObservers.keys.contains(specificVariableName!) {
                 if observer != nil {
-                    _variableObservers[specificVariableName] -= observer
-                    if _variableObservers[specificVariableName] == nil {
-                        _variableObservers.removeValue(forKey: specificVariableName)
+                    _variableObservers[specificVariableName!] -= observer
+                    if _variableObservers[specificVariableName!] == nil {
+                        _variableObservers.removeValue(forKey: specificVariableName!)
                     }
                 }
                 else {
-                    _variableObservers.removeValue(forKey: specificVariableName)
+                    _variableObservers.removeValue(forKey: specificVariableName!)
                 }
             }
         }
@@ -1965,14 +1965,13 @@ public class Story: Object {
         }
     }
     
-    func VariableStateDidChangeEvent(_ variableName: String, _ newValueObj: Object) {
-        var observers: VariableObserver? = nil
+    func VariableStateDidChangeEvent(_ variableName: String, _ newValueObj: Object) throws {
         if let observers = _variableObservers[variableName] {
-            if !(newValueObj is BaseValue) {
+            if !(newValueObj is (any BaseValue)) {
                 throw StoryError.variableNotStandardType
             }
             
-            var val = newValueObj as! BaseValue
+            var val = newValueObj as! (any BaseValue)
             observers(variableName, nil) // val.value as! Any?) // AAAAAAHHHHHHHHH
         }
     }
@@ -1980,16 +1979,18 @@ public class Story: Object {
     /// Get any global tags associated with the story. These are defined as
     /// hash tags at the very top of the .ink file.
     public var globalTags: [String] {
-        TagsAtStartOfFlowContainerWithPathString("")
+        get throws {
+            try TagsAtStartOfFlowContainerWithPathString("")
+        }
     }
     
     /// Gets any tags associated with a particular knot or knot stitch.
     /// These are defined as hash tags at the very top of a knot or stitch.
-    public func TagsForContentAtPath(_ path: String) -> [String] {
-        TagsAtStartOfFlowContainerWithPathString(path)
+    public func TagsForContentAtPath(_ path: String) throws -> [String] {
+        try TagsAtStartOfFlowContainerWithPathString(path)
     }
     
-    func TagsAtStartOfFlowContainerWIthPathString(_ pathString: String) -> [String] {
+    func TagsAtStartOfFlowContainerWithPathString(_ pathString: String) throws -> [String] {
         var path = Path(pathString)
         
         // Expected to be global story, knot, or stitch
@@ -1997,7 +1998,7 @@ public class Story: Object {
         while true {
             var firstContent = flowContainer?.content[0]
             if firstContent is Container {
-                flowContainer = firstContent as! Container
+                flowContainer = firstContent as? Container
             }
             else {
                 break
@@ -2007,7 +2008,7 @@ public class Story: Object {
         // Any initial tag objects count as the "main tags" associated with that story/knot/stitch
         var inTag = false
         var tags: [String] = []
-        for c in flowContainer?.content {
+        for c in flowContainer!.content {
             if let command = c as? ControlCommand {
                 if command.commandType == .beginTag {
                     inTag = true
@@ -2022,7 +2023,7 @@ public class Story: Object {
                     tags.append(str.value!)
                 }
                 else {
-                    Error("tag contained non-text content. Only plain text is allowed when using globalTags or TagsAtContentPath. If you want to evaluate dynamic content, you need to use story.Continue().")
+                    try Error("tag contained non-text content. Only plain text is allowed when using globalTags or TagsAtContentPath. If you want to evaluate dynamic content, you need to use story.Continue().")
                 }
             }
             
@@ -2054,7 +2055,7 @@ public class Story: Object {
     }
     
     
-    private func NextContent() {
+    private func NextContent() throws {
         // Setting previousContentObject is critical for VisitChangedContainersDueToDivert
         state.previousPointer = state.currentPointer
         
@@ -2064,7 +2065,7 @@ public class Story: Object {
             state.divertedPointer = Pointer.Null
             
             // Internally uses state.previousContentObject and state.currentContentObject
-            VisitChangedContainersDueToDivert()
+            try VisitChangedContainersDueToDivert()
             
             // Diverted location has valid content?
             if !state.currentPointer.isNull {
@@ -2106,7 +2107,7 @@ public class Story: Object {
             
             // Step past the point where we last called out
             if didPop && !state.currentPointer.isNull {
-                NextContent()
+                try NextContent()
             }
         }
     }
@@ -2147,7 +2148,7 @@ public class Story: Object {
     }
     
 
-    func TryFollowDefaultInvisibleChoice() -> Bool {
+    func TryFollowDefaultInvisibleChoice() throws -> Bool {
         var allChoices = _state.currentChoices
         
         // Is a default invisible choice the ONLY choice?
@@ -2169,7 +2170,7 @@ public class Story: Object {
             state.callStack.currentThread = state.callStack.ForkThread()
         }
         
-        ChoosePath(choice.targetPath!, incrementingTurnIndex: false)
+        try ChoosePath(choice.targetPath!, incrementingTurnIndex: false)
         
         return false
     }
@@ -2240,7 +2241,7 @@ public class Story: Object {
         
         if dm != nil {
             var lineNum = useEndLineNumber ? dm!.endLineNumber : dm!.startLineNumber
-            message = "RUNTIME \(errorTypeStr): '\(dm!.fileName)' line \(lineNum): \(message)"
+            message = "RUNTIME \(errorTypeStr): '\(dm!.fileName!)' line \(lineNum): \(message)"
         }
         else if !state.currentPointer.isNull {
             message = "RUNTIME \(errorTypeStr): (\(state.currentPointer.path!)): \(message)"
@@ -2257,7 +2258,6 @@ public class Story: Object {
         }
     }
     
-    // TODO: Find all the places we goofed the assert!!
     func Assert(_ condition: Bool, _ message: String? = nil) throws {
         var message = message
         

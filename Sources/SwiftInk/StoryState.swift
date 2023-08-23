@@ -57,9 +57,9 @@ public class StoryState {
     /// ```
     /// - Parameter pathString: The dot-separated path string of the specific knot or stitch.
     /// - Returns: The number of times the specific knot or stitch has been encountered by the ink engine.
-    public func VisitCountAtPathString(_ pathString: String) -> Int {
+    public func VisitCountAtPathString(_ pathString: String) throws -> Int {
         if _patch != nil {
-            guard let container = story.ContentAtPath(Path(pathString)).container else {
+            guard let container = story!.ContentAtPath(Path(pathString))?.container else {
                 throw StoryError.contentAtPathNotFound(path: pathString)
             }
             
@@ -75,9 +75,9 @@ public class StoryState {
         return 0
     }
     
-    public func VisitCountForContainer(_ container: Container) -> Int {
+    public func VisitCountForContainer(_ container: Container) throws -> Int {
         if !container.visitsShouldBeCounted {
-            story.Error("Read count for target (\(container.name) - on \(container.debugMetadata)) unknown")
+            try story?.Error("Read count for target (\(container.name!) - on \(container.debugMetadata!)) unknown")
             return 0
         }
         
@@ -88,9 +88,9 @@ public class StoryState {
         return _visitCounts[container.path.description] ?? 0
     }
     
-    public func IncrementVisitCountForContainer(_ container: Container) {
+    public func IncrementVisitCountForContainer(_ container: Container) throws {
         if _patch != nil {
-            var currCount = VisitCountForContainer(container)
+            var currCount = try VisitCountForContainer(container)
             currCount += 1
             _patch!._visitCounts[container] = currCount
             return
@@ -111,9 +111,9 @@ public class StoryState {
         _turnIndices[container.path.description] = currentTurnIndex
     }
     
-    public func TurnsSinceForContainer(_ container: Container) -> Int {
+    public func TurnsSinceForContainer(_ container: Container) throws -> Int {
         if !container.turnIndexShouldBeCounted {
-            story.Error("TURNS_SINCE() for target (\(container.name) - on \(container.debugMetadata)) unknown.")
+            try story?.Error("TURNS_SINCE() for target (\(container.name!) - on \(container.debugMetadata!)) unknown.")
         }
         
         if let index = _patch?.turnIndices[container] {
@@ -173,7 +173,7 @@ public class StoryState {
     
     /// String representation of the location where the story currently is.
     public var currentPathString: String? {
-        currentPointer.isNull ? nil : pointer.path.description
+        currentPointer.isNull ? nil : currentPointer.path!.description
     }
     
     public var currentPointer: Pointer {
@@ -233,6 +233,7 @@ public class StoryState {
         
         return _currentText
     }
+    var _currentText: String = ""
     
     public func CleanOutputWhitespace(_ str: String) -> String {
         var sb = ""
@@ -360,6 +361,12 @@ public class StoryState {
     
     public init(_ story: Story) {
         self.story = story
+        self.currentTurnIndex = -1
+        self.didSafeExit = false
+        
+        // Seed the shuffle random numbers
+        self.storySeed = Int.random(in: 0 ..< 100)
+        self.previousRandom = 0
         
         _currentFlow = Flow(kDefaultFlowName, story)
         
@@ -373,17 +380,15 @@ public class StoryState {
         _visitCounts = [:]
         _turnIndices = [:]
         
-        currentTurnIndex = -1
         
-        // Seed the shuffle random numbers
-        storySeed = Int.random(in: 0 ..< 100)
-        previousRandom = 0
+        
+
         
         GoToStart()
     }
     
     public func GoToStart() {
-        callStack.currentElement.currentPointer = Pointer.StartOf(story.mainContentContainer)
+        callStack.currentElement.currentPointer = Pointer.StartOf(story!.mainContentContainer)
     }
     
     internal func SwitchFlow_Internal(_ flowName: String) {
@@ -396,8 +401,9 @@ public class StoryState {
             return
         }
         
-        guard let flow = _namedFlows[flowName] else {
-            let flow = Flow(flowName, story!)
+        var flow = _namedFlows[flowName]
+        if flow == nil {
+            flow = Flow(flowName, story!)
             _namedFlows[flowName] = flow
             _aliveFlowNamesDirty = true
         }
@@ -984,11 +990,11 @@ public class StoryState {
     }
     
     // Don't make public since the method needs to be wrapped in Story for visit counting
-    func SetChosenPath(_ path: Path, _ incrementingTurnIndex: Bool) {
+    func SetChosenPath(_ path: Path, _ incrementingTurnIndex: Bool) throws {
         // Changing direction, assume we need to clear current set of choices
         _currentFlow.currentChoices = []
         
-        var newPointer = story.PointerAtPath(path)
+        var newPointer = try story!.PointerAtPath(path)
         if !newPointer.isNull && newPointer.index == -1 {
             newPointer.index = 0
         }

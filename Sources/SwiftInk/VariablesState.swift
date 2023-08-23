@@ -160,7 +160,7 @@ public class VariablesState: Sequence {
     }
     
     public func GetVariableWithName(_ name: String?) -> Object? {
-        GetVariableWithName(name, -1)
+        GetVariableWithName(name!, -1)
     }
     
     public func GlobalVariableExistsWithName(_ name: String) -> Bool {
@@ -210,7 +210,7 @@ public class VariablesState: Sequence {
         }
         
         // Temporary
-        return _callStack?.GetTemporaryVariableWithName(name, contextIndex)
+        return _callStack?.GetTemporaryVariableWithName(name!, contextIndex)
     }
     
     public func ValueAtVariablePointer(_ pointer: VariablePointerValue) -> Object? {

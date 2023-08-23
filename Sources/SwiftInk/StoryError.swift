@@ -43,6 +43,22 @@ enum StoryError: Error {
     
     case cantSaveOnBackgroundThreadTwice
     
+    case nonIntWhenCreatingListFromNumericalValue
+    case failedToFindList(called: String)
+    
+    case expectedListMinAndMaxForListRange
+    case expectedListForListRandom
+    
+    case choosePathStringCalledDuringFunction(funcDetail: String, pathString: String, stackTrace: String)
+    case cannotPerformActionBecauseAsync(activityStr: String)
+    
+    case nullFunction
+    case functionIsEmptyOrWhitespace
+    case functionDoesntExist(name: String)
+    
+    case variableNotDeclared(variableName: String)
+    
+    case variableNotStandardType
     
     case genericError(message: String, useEndLineNumber: Bool)
     case assertionFailure(_ message: String, _ currentDebugMetadata: DebugMetadata?)

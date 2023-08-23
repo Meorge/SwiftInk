@@ -1,6 +1,10 @@
 import Foundation
 
-public class ListDefinition {
+public class ListDefinition: Equatable {
+    public static func == (lhs: ListDefinition, rhs: ListDefinition) -> Bool {
+        return lhs.name == rhs.name && lhs._itemNameToValues == rhs._itemNameToValues
+    }
+    
     private(set) var name: String = ""
     
     private var _itemNameToValues: [String: Int] = [:]
