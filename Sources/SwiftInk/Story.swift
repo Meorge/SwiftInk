@@ -112,29 +112,7 @@ public class Story: Object {
         _state
     }
     
-    /// Error handler for all runtime errors in ink - i.e. problems
-    /// with the source ink itself that are only discovered when playing
-    /// the story.
-    ///
-    /// It's strongly recommended that you assign an error handler to your
-    /// story instance to avoid getting exceptions for ink errors.
-    public var onError: [ErrorHandler] = []
-    
-    /// Callback for when `ContinueInterval` is complete
-    public var onDidContinue: [() -> Void] = []
-    
-    /// Callback for when a choice is about to be executed
-    public var onMakeChoice: [(Choice) -> Void] = []
-    
-    /// Callback for when a function is about to be evaluated
-    public var onEvaluateFunction: [(String, [Any?]) -> Void] = []
-    
-    /// Callback for when a function has been evaluated.
-    /// This is necessary because evaluating a function can cause continuing.
-    public var onCompleteEvaluateFunction: [(String, [Any?], String, Any?) -> Void] = []
-    
-    /// Callback for when a path string is chosen.
-    public var onChoosePathString: [(String, [Any?]) -> Void] = []
+    public var delegate: StoryEventHandler? = nil
     
     /// Start recording ink profiling information during calls to `Continue()` on this story.
     /// - Returns: a `Profiler` instance that you can request a report from when you're finished.
@@ -411,7 +389,7 @@ public class Story: Object {
             }
             
             _asyncContinueActive = false
-            onDidContinue.Invoke()
+            delegate?.onDidContinue()
         }
         
         _recursiveContinueCount -= 1
@@ -422,21 +400,22 @@ public class Story: Object {
         // This may either have been StoryErrors that were thrown
         // and caught during evaluation, or directly added with AddError().
         if state.hasError || state.hasWarning {
-            if onError.isEmpty {
+            if delegate != nil {
                 if state.hasError {
                     for err in state.currentErrors {
-                        onError.Invoke(err, .error)
+                        delegate!.onError(withMessage: err, ofType: .error)
                     }
                 }
                 
                 if state.hasWarning {
                     for err in state.currentWarnings {
-                        onError.Invoke(err, .warning)
+                        delegate!.onError(withMessage: err, ofType: .warning)
                     }
                 }
                 
                 ResetErrors()
             }
+            
             // Throw an exception since there's no error handler
             else {
                 var sb = ""
@@ -1103,7 +1082,7 @@ public class Story: Object {
                     
                     // Does tunnel onwards override by diverting to a new ->-> target?
                     if overrideTunnelReturnTarget != nil {
-                        state.divertedPointer = PointerAtPath(overrideTunnelReturnTarget?.targetPath!)
+                        state.divertedPointer = try PointerAtPath(overrideTunnelReturnTarget!.targetPath)
                     }
                 }
                 
@@ -1111,7 +1090,7 @@ public class Story: Object {
             case .beginString:
                 state.PushToOutputStream(evalCommand)
                 
-                Assert(state.inExpressionEvaluation, "Expected to be in an expression when evaluating a string")
+                try Assert(state.inExpressionEvaluation, "Expected to be in an expression when evaluating a string")
                 state.inExpressionEvaluation = false
                 break
                 
@@ -1164,7 +1143,7 @@ public class Story: Object {
                                 break
                             }
                             else {
-                                Error("Unexpected ControlCommand while extracting tag from choice")
+                                try Error("Unexpected ControlCommand while extracting tag from choice")
                                 break
                             }
                         }
@@ -1264,7 +1243,7 @@ public class Story: Object {
                     if target is IntValue {
                         extraNote = ". Did you accidentally pass a read count ('knot_name') instead of a target ('-> knot_name')?"
                     }
-                    Error("TURNS_SINCE expected a divert target (knot, stitch, label name), but saw \(target)\(extraNote)")
+                    try Error("TURNS_SINCE expected a divert target (knot, stitch, label name), but saw \(target)\(extraNote)")
                     break
                 }
                 
@@ -1272,10 +1251,10 @@ public class Story: Object {
                 var eitherCount = 0 // value not explicitly defined in C# code, so I assume it defaults to 0?
                 if var container = ContentAtPath(divertTarget.targetPath)?.correctObj as? Container {
                     if evalCommand.commandType == .turnsSince {
-                        eitherCount = state.TurnsSinceForContainer(container)
+                        eitherCount = try state.TurnsSinceForContainer(container)
                     }
                     else {
-                        eitherCount = state.VisitCountForContainer(container)
+                        eitherCount = try state.VisitCountForContainer(container)
                     }
                 }
                 else {
@@ -1294,11 +1273,11 @@ public class Story: Object {
                 
             case .random:
                 guard var maxInt = state.PopEvaluationStack() as? IntValue else {
-                    Error("Invalid value for maximum parameter of RANDOM(min, max)")
+                    try Error("Invalid value for maximum parameter of RANDOM(min, max)")
                 }
                 
                 guard var minInt = state.PopEvaluationStack() as? IntValue else {
-                    Error("Invalid value for minimum parameter of RANDOM(min, max)")
+                    try Error("Invalid value for minimum parameter of RANDOM(min, max)")
                 }
                 
                 // +1 because it's inclusive of min and max, for e.g. RANDOM(1,6) for a dice roll.
@@ -1309,10 +1288,10 @@ public class Story: Object {
                 }
                 catch {
                     randomRange = Int.max
-                    Error("RANDOM() was called with a range that exceeds the size that ink numbers can use.")
+                    try Error("RANDOM() was called with a range that exceeds the size that ink numbers can use.")
                 }
                 if randomRange <= 0 {
-                    Error("RANDOM() was called with minimum as \(minInt.value!) and maximum as \(maxInt.value!). The maximum must be larger")
+                    try Error("RANDOM() was called with minimum as \(minInt.value!) and maximum as \(maxInt.value!). The maximum must be larger")
                 }
                 
                 var resultSeed = state.storySeed + state.previousRandom
@@ -1328,7 +1307,7 @@ public class Story: Object {
                 
             case .seedRandom:
                 guard let seed = state.PopEvaluationStack() as? IntValue else {
-                    Error("Invalid value passed to SEED_RANDOM()")
+                    try Error("Invalid value passed to SEED_RANDOM()")
                 }
                 
                 // Story seed affects both RANDOM and shuffle behavior
@@ -1547,9 +1526,7 @@ public class Story: Object {
     /// - Parameter arguments: Optional set of arguments to pass, if path is to a knot that takes them.
     public func ChoosePathString(_ path: String, resetCallstack: Bool = true, _ arguments: Any?...) throws {
         try IfAsyncWeCant("call ChoosePathString right now")
-        if onChoosePathString != nil {
-            onChoosePathString(path, arguments)
-        }
+        delegate?.onChoosePathString(atPath: path, withArguments: arguments)
         if resetCallstack {
             try ResetCallstack()
         }
@@ -1595,9 +1572,7 @@ public class Story: Object {
         // can create multiple leading edges for the story, each of
         // which has its own context.
         var choiceToChoose = choices[choiceIdx]
-        if onMakeChoice != nil {
-            onMakeChoice(choiceToChoose)
-        }
+        delegate?.onMakeChoice(named: choiceToChoose)
         state.callStack.currentThread = choiceToChoose.threadAtGeneration!
         
         try ChoosePath(choiceToChoose.targetPath!)
@@ -1631,9 +1606,7 @@ public class Story: Object {
     /// - Parameter textOutput: The text produced by thefunction via normal ink, if any.
     /// - Parameter arguments: The arguments that the ink function takes, if any. Note that we don't (can't) do any validation on the number of arguments right now, so make sure you get it right!
     public func EvaluateFunction(_ functionName: String?, _ textOutput: inout String, _ arguments: Any?...) throws -> Any? {
-        if onEvaluateFunction != nil {
-            onEvaluateFunction(functionName, arguments)
-        }
+        delegate?.onEvaluateFunction(named: functionName!, withArguments: arguments)
         try IfAsyncWeCant("evaluate a function")
         
         if functionName == nil {
@@ -1668,9 +1641,7 @@ public class Story: Object {
         
         // Finish evaluation, and see whether anything was produced
         var result = try state.CompleteFunctionEvaluationFromGame()
-        if onCompleteEvaluateFunction != nil {
-            onCompleteEvaluateFunction(functionName, arguments, textOutput, result)
-        }
+        delegate?.onCompleteEvaluateFunction(named: functionName!, withArguments: arguments, outputtingText: textOutput, withResult: result)
         return result
     }
     
@@ -1889,9 +1860,6 @@ public class Story: Object {
         }
     }
     
-    /// Delegate definition for variable observation - see `ObserveVariable`.
-    public typealias VariableObserver = (_ variableName: String, _ newValue: Any?) -> Void
-    
     /// When the named global variable changes its value, the observer will be
     /// called to notify it of the change. Note that if the value changes multiple
     /// times within the ink, the observer will only be called once, at the end
@@ -1902,7 +1870,7 @@ public class Story: Object {
     /// `story.variablesState`.
     /// - Parameter variableName: The name of the global variable to observe.
     /// - Parameter observer: A delegate function to call when the variable changes.
-    public func ObserveVariable(_ variableName: String, _ observer: @escaping VariableObserver) throws {
+    public func ObserveVariable(_ variableName: String, _ observer: VariableChangeHandler) throws {
         try IfAsyncWeCant("observe a new variable")
         
         if !state.variablesState!.GlobalVariableExistsWithName(variableName) {
@@ -1910,10 +1878,10 @@ public class Story: Object {
         }
         
         if _variableObservers.keys.contains(variableName) {
-            _variableObservers[variableName] += observer
+            _variableObservers[variableName]!.append(observer)
         }
         else {
-            _variableObservers[variableName] = observer
+            _variableObservers[variableName] = [observer]
         }
         
     }
@@ -1923,7 +1891,7 @@ public class Story: Object {
     /// The observer will get one call for every variable that has changed.
     /// - Parameter variableNames: The set of variables to observe.
     /// - Parameter observer: The delegate function to call when any of the named variables change.
-    public func ObserveVariables(_ variableNames: [String], _ observer: @escaping VariableObserver) throws {
+    public func ObserveVariables(_ variableNames: [String], _ observer: VariableChangeHandler) throws {
         for varName in variableNames {
             try ObserveVariable(varName, observer)
         }
@@ -1936,15 +1904,17 @@ public class Story: Object {
     /// null for the the observer, all observers for that variable will be removed.
     /// - Parameter observer: (Optional) The observer to stop observing.
     /// - Parameter specificVariableName: (Optional) Specific variable name to stop observing.
-    public func RemoveVariableObserver(_ observer: VariableObserver?, _ specificVariableName: String? = nil) throws {
+    public func RemoveVariableObserver(_ observer: VariableChangeHandler?, _ specificVariableName: String? = nil) throws {
         try IfAsyncWeCant("remove a variable observer")
         
         // Remove observer for this specific variable
         if specificVariableName != nil {
             if _variableObservers.keys.contains(specificVariableName!) {
                 if observer != nil {
-                    _variableObservers[specificVariableName!] -= observer
-                    if _variableObservers[specificVariableName!] == nil {
+                    if let index = _variableObservers[specificVariableName!]!.firstIndex(of: observer!) {
+                        _variableObservers[specificVariableName!]!.remove(at: index)
+                    }
+                    if _variableObservers[specificVariableName!]!.isEmpty {
                         _variableObservers.removeValue(forKey: specificVariableName!)
                     }
                 }
@@ -1957,8 +1927,10 @@ public class Story: Object {
         // Remove observer for all variables
         else if observer != nil {
             for varName in _variableObservers.keys {
-                _variableObservers[varName] -= observer
-                if _variableObservers[varName] == nil {
+                if let index = _variableObservers[varName]!.firstIndex(of: observer!) {
+                    _variableObservers[varName]!.remove(at: index)
+                }
+                if _variableObservers[varName]!.isEmpty {
                     _variableObservers.removeValue(forKey: varName)
                 }
             }
@@ -1972,7 +1944,9 @@ public class Story: Object {
             }
             
             var val = newValueObj as! (any BaseValue)
-            observers(variableName, nil) // val.value as! Any?) // AAAAAAHHHHHHHHH
+            for observer in observers {
+                observer.onVariableChanged?(variableName, nil) // TODO: cast val.value as Any? AHHHHHHH
+            }
         }
     }
     
@@ -2326,7 +2300,7 @@ public class Story: Object {
     }
     
     private var _externals: [String: ExternalFunctionDef] = [:]
-    private var _variableObservers: [String: VariableObserver] = [:]
+    private var _variableObservers: [String: [VariableChangeHandler]] = [:]
     private var _hasValidatedExternals: Bool
     
     private var _temporaryEvaluationContainer: Container?
