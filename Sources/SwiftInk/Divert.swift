@@ -1,6 +1,6 @@
 import Foundation
 
-public class Divert: Object, Hashable, CustomStringConvertible {
+public class Divert: Object, CustomStringConvertible {
     public var targetPath: Path? {
         get {
             if _targetPath != nil && _targetPath!.isRelative {
@@ -90,7 +90,7 @@ public class Divert: Object, Hashable, CustomStringConvertible {
         return false
     }
     
-    public func hash(into hasher: inout Hasher) {
+    public override func hash(into hasher: inout Hasher) {
         if hasVariableTarget {
             let variableTargetSalt = 12345
             hasher.combine(variableDivertName?.hashValue ?? 0 + variableTargetSalt)

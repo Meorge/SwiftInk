@@ -202,7 +202,7 @@ public class Story: Object {
         try IfAsyncWeCant("ResetState")
         
         _state = StoryState(self)
-        _state.variablesState?.variableChangedEvent += VariableStateDidChangeEvent
+        _state.variablesState!.variableChangedEvent = VariableStateDidChangeEvent
         
         try ResetGlobals()
     }
@@ -315,7 +315,7 @@ public class Story: Object {
             // In this case, we only want to batch observe variable changes
             // for the outermost call
             if _recursiveContinueCount == 1 {
-                _state.variablesState?.batchObservingVariableChanges = true
+                _state.variablesState?.StartBatchObservingVariableChanges()
             }
         }
         
@@ -385,7 +385,7 @@ public class Story: Object {
             _sawLookaheadUnsafeFunctionAfterNewline = false
             
             if _recursiveContinueCount == 1 {
-                _state.variablesState?.batchObservingVariableChanges = false
+                try _state.variablesState?.StopBatchObservingVariableChanges()
             }
             
             _asyncContinueActive = false
@@ -945,7 +945,6 @@ public class Story: Object {
     /// and performs the required command if necessary.
     /// - Returns: `true` if an object was logic or flow control, `false` if it was normal content.
     /// - Parameter contentObj: Content object.
-    ///
     func PerformLogicAndFlowControl(_ contentObj: Object?) throws -> Bool {
         if contentObj == nil {
             return false
@@ -1937,13 +1936,13 @@ public class Story: Object {
         }
     }
     
-    func VariableStateDidChangeEvent(_ variableName: String, _ newValueObj: Object) throws {
+    func VariableStateDidChangeEvent(_ variableName: String, _ newValue: Object?) throws -> Void {
         if let observers = _variableObservers[variableName] {
-            if !(newValueObj is (any BaseValue)) {
+            if !(newValue is (any BaseValue)) {
                 throw StoryError.variableNotStandardType
             }
             
-            var val = newValueObj as! (any BaseValue)
+            var val = newValue as! (any BaseValue)
             for observer in observers {
                 observer.onVariableChanged?(variableName, nil) // TODO: cast val.value as Any? AHHHHHHH
             }

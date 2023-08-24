@@ -1007,7 +1007,7 @@ public class StoryState {
     }
     
     public func StartFunctionEvaluationFromGame(_ funcContainer: Container, _ arguments: Any...) throws {
-        callStack.Push(.FunctionEvaluationFromGame, evaluationStack.count)
+        callStack.Push(.FunctionEvaluationFromGame, externalEvaluationStackHeight: evaluationStack.count)
         callStack.currentElement.currentPointer = Pointer.StartOf(funcContainer)
         
         try PassArgumentsToEvaluationStack(arguments)

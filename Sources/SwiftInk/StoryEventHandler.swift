@@ -29,7 +29,7 @@ public class VariableChangeHandler: Equatable, Hashable {
     let id: UUID
     var onVariableChanged: VariableObserver? = nil
     
-    public init(_ onVariableChanged: @escaping VariableObserver) {
+    public init(_ onVariableChanged: VariableObserver?) {
         self.id = UUID()
         self.onVariableChanged = onVariableChanged
     }

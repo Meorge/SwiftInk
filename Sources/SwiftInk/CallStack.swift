@@ -63,7 +63,7 @@ public class CallStack {
                         throw StoryError.exactInternalStoryLocationNotFound(pathStr: currentContainerPathStr ?? "nil")
                     }
                     else if threadPointerResult.approximate {
-                        storyContext.Warning("When loading state, exact internal story location couldn't be found: '\(currentContainerPathStr)', so it was approximated to '\(pointer.container.path)' to recover. Has the story changed since this save data was created?")
+                        storyContext.Warning("When loading state, exact internal story location couldn't be found: '\(currentContainerPathStr!)', so it was approximated to '\(pointer.container!.path)' to recover. Has the story changed since this save data was created?")
                     }
                 }
                 
@@ -98,9 +98,37 @@ public class CallStack {
             return copy
         }
         
-        // TODO: Write JSON!!
-        public func WriteJson() {
+        public func WriteJson() -> [String: Any?] {
+            var ba: [String: Any?] = [
+                "callstack": callstack.map { el in
+                    var obj: [String: Any?] = [:]
+                    if !el.currentPointer.isNull {
+                        obj["cPath"] = el.currentPointer.container!.path.componentsString
+                        obj["idx"] = el.currentPointer.index
+                    }
+                    
+                    obj["exp"] = el.inExpressionEvaluation
+                    obj["type"] = el.type.rawValue
+                    
+                    if !el.temporaryVariables.isEmpty {
+                        var tempVars: [String: Any?] = [:]
+                        for kvPair in el.temporaryVariables {
+                            // TODO: Fix this after fixing BaseValue
+//                            tempVars[kvPair.key] = (kvPair.value as! (BaseValue)).value
+                        }
+                        obj["temp"] = tempVars
+                    }
+                    
+                    return obj
+                },
+                
+                "threadIndex": threadIndex
+                ]
+            if !previousPointer.isNull {
+                ba["previousContentObject"] = previousPointer.Resolve()!.path.description
+            }
             
+            return ba
         }
     }
     

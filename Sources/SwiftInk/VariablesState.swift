@@ -1,21 +1,49 @@
 import Foundation
 
 public class VariablesState: Sequence {
-    public typealias VariableChanged = (_ variableName: String, _ newValue: Object) -> Void
-    public var variableChangedEvent: VariableChanged?
+    public typealias VariableChanged = (_ variableName: String, _ newValue: Object?) throws -> Void
     
-    public var patch: StatePatch?
-    
-    // TODO: Fill out
-    public var batchObservingVariableChanges: Bool {
-        get {
-            
+    public class VariablesStateChangeHandler: Equatable, Hashable {
+        public static func == (lhs: VariablesStateChangeHandler, rhs: VariablesStateChangeHandler) -> Bool {
+            lhs.id == rhs.id
         }
-        set {
-            
+        
+        public func hash(into hasher: inout Hasher) {
+            hasher.combine(id)
+        }
+        
+        let id: UUID
+        var onVariableChanged: VariableChanged? = nil
+        
+        public init(_ onVariableChanged: VariableChanged?) {
+            self.id = UUID()
+            self.onVariableChanged = onVariableChanged
         }
     }
     
+    public var variableChangedEvent: VariableChanged? = nil
+    
+    
+    
+    public var patch: StatePatch?
+    
+    public var batchObservingVariableChanges: Bool {
+        _batchObservingVariableChanges
+    }
+    
+    public func StartBatchObservingVariableChanges() {
+        _changedVariablesForBatchObs = Set<String>()
+    }
+    
+    public func StopBatchObservingVariableChanges() throws {
+        _batchObservingVariableChanges = false
+        if _changedVariablesForBatchObs != nil {
+            for variableName in _changedVariablesForBatchObs! {
+                var currentValue = _globalVariables[variableName]!
+                try variableChangedEvent?(variableName, currentValue)
+            }
+        }
+    }
     var _batchObservingVariableChanges: Bool = false
     
     // Allow StoryState to change the current callstack, e.g. for

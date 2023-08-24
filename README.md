@@ -40,7 +40,7 @@ Ink runtime engine:
 - ✅ `SearchResult`
 - ❌ `SimpleJson`
 - ✅ `StatePatch`
-- 📝 `Story`
+- 📝 `Story` (JSON functions need to be implemented)
 - ✅ `StoryException` (now `StoryError`, and with separate errors)
 - 📝 `StoryState` (JSON functions need to be implemented)
 - ✅ `StringJoinExtension` (uses built-in Swift methods)
