@@ -61,20 +61,20 @@ public class VariablesState: Sequence {
         get {
             if let varContents = patch!.globals[variableName] {
                 if let varValue = varContents as? (any BaseValue) {
-                    // TODO: what to do here???
+                    return varValue.valueObject
                 }
             }
-//
-//            // Search main dictionary first.
-//            // If it's not found, it might be because the story content has changed,
-//            // and the original default value hasn't be instantiated (???)
-//            // Should really warn somehow, but it's difficult to see how...!
-//            if let varContents = _globalVariables[variableName] {
-//                return (varContents as! BaseValue).value
-//            }
-//            if let varContents = _defaultGlobalVariables[variableName] {
-//                return (varContents as! BaseValue).value
-//            }
+
+            // Search main dictionary first.
+            // If it's not found, it might be because the story content has changed,
+            // and the original default value hasn't be instantiated (???)
+            // Should really warn somehow, but it's difficult to see how...!
+            if let varContents = _globalVariables[variableName] {
+                return (varContents as! (any BaseValue)).valueObject
+            }
+            if let varContents = _defaultGlobalVariables[variableName] {
+                return (varContents as! (any BaseValue)).valueObject
+            }
             return nil
         }
     }

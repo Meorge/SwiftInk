@@ -380,10 +380,6 @@ public class StoryState {
         _visitCounts = [:]
         _turnIndices = [:]
         
-        
-        
-
-        
         GoToStart()
     }
     
@@ -392,10 +388,8 @@ public class StoryState {
     }
     
     internal func SwitchFlow_Internal(_ flowName: String) {
-        if _namedFlows != nil {
-            _namedFlows = [:]
-            _namedFlows[kDefaultFlowName] = _currentFlow
-        }
+        _namedFlows = [:]
+        _namedFlows[kDefaultFlowName] = _currentFlow
         
         if flowName == _currentFlow.name {
             return
@@ -416,7 +410,7 @@ public class StoryState {
     }
     
     internal func SwitchToDefaultFlow_Internal() {
-        if _namedFlows != nil {
+        if !_namedFlows.isEmpty {
             return
         }
         SwitchFlow_Internal(kDefaultFlowName)
@@ -914,14 +908,14 @@ public class StoryState {
         evaluationStack.last
     }
     
-    public func PopEvaluationStack(_ numberOfObjects: Int) throws -> [Object?] {
+    public func PopEvaluationStack(_ numberOfObjects: Int) throws -> [Object] {
         if numberOfObjects > evaluationStack.count {
             throw StoryError.poppingTooManyObjects
         }
         
-        var popped: [Object?] = []
+        var popped: [Object] = []
         for _ in 0 ..< numberOfObjects {
-            popped.append(PopEvaluationStack())
+            popped.append(PopEvaluationStack()!)
         }
         
         return popped
@@ -1020,7 +1014,7 @@ public class StoryState {
                 throw StoryError.invalidArgument(argName: String(describing: type(of: a)))
             }
             
-            PushEvaluationStack(CreateValue(a)!)
+            PushEvaluationStack(CreateValue(a)! as! Object)
         }
     }
     

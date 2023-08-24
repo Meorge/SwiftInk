@@ -60,9 +60,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
             _originNames = Array<String>(otherOriginNames)
         }
         
-        if otherList.origins != nil {
-            origins = Array<ListDefinition>(otherList.origins)
-        }
+        origins = Array<ListDefinition>(otherList.origins)
     }
     
     /// Create a new empty ink list that's intended to hold items from a particular origin
@@ -90,9 +88,9 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     ///   - originStory: Origin story.
     /// - Returns: `InkList` created from string list item
     public static func FromString(_ myListItem: String, _ originStory: Story) -> InkList {
-        var listValue = originStory.listDefinitions.FindSingleItemListWithName(myListItem)
+        var listValue = originStory.listDefinitions!.FindSingleItemListWithName(myListItem)
         if listValue != nil {
-            return InkList(listValue.value)
+            return InkList(listValue!.value!)
         }
         else {
             fatalError("Could not find the InkListItem from the string \"\(myListItem)\" to create an InkList because it doesn't exist in the original list definition in ink.")
@@ -112,7 +110,6 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
         
         for origin in origins {
             if origin.name == item.originName {
-                var intVal: Int
                 if let intVal = origin.TryGetValueForItem(item) {
                     internalDict[item] = intVal
                     return
@@ -176,10 +173,6 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// the origin can be resolved from the `originListName`.
     public var origins: [ListDefinition] = []
     public var originOfMaxItem: ListDefinition? {
-        if origins == nil {
-            return nil
-        }
-        
         var maxOriginName = maxItem.key.originName
         for origin in origins {
             if origin.name == maxOriginName {
@@ -244,12 +237,10 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// The inverse of the list, equivalent to calling `LIST_INVERSE(list)` in ink.
     public var inverse: InkList {
         var list = InkList()
-        if origins != nil {
-            for origin in origins {
-                for itemAndValue in origin.items {
-                    if !internalDict.keys.contains(itemAndValue.key) {
-                        list.internalDict[itemAndValue.key] = itemAndValue.value
-                    }
+        for origin in origins {
+            for itemAndValue in origin.items {
+                if !internalDict.keys.contains(itemAndValue.key) {
+                    list.internalDict[itemAndValue.key] = itemAndValue.value
                 }
             }
         }
@@ -260,11 +251,9 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// `LIST_ALL(list)` in ink.
     public var all: InkList {
         var list = InkList()
-        if origins != nil {
-            for origin in origins {
-                for itemAndValue in origin.items {
-                    list.internalDict[itemAndValue.key] = itemAndValue.value
-                }
+        for origin in origins {
+            for itemAndValue in origin.items {
+                list.internalDict[itemAndValue.key] = itemAndValue.value
             }
         }
         return list
@@ -443,7 +432,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
         }
         else {
             if maxBound is InkList && (maxBound as! InkList).internalDict.count > 0 {
-                maxValue = (maxBound as! InkList).maxItem!.value
+                maxValue = (maxBound as! InkList).maxItem.value
             }
         }
         

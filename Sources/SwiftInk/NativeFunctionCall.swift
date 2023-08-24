@@ -59,7 +59,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
             }
         }
     }
-    private var _name: String
+    private var _name: String = ""
     
     var numberOfParameters: Int {
         get {
@@ -74,9 +74,9 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
             _numberOfParameters = newValue
         }
     }
-    private var _numberOfParameters: Int
+    private var _numberOfParameters: Int = 0
     
-    public func Call(_ parameters: [Object?]) throws -> Object? {
+    public func Call(_ parameters: [Object]) throws -> Object? {
         if _prototype != nil {
             return try _prototype!.Call(parameters)
         }
@@ -97,7 +97,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
         
         // Binary operations on lists are treated outside of the standard coercion rules
         if parameters.count == 2 && hasList {
-            return try CallBinaryListOperation(parameters) as! Object
+            return try CallBinaryListOperation(parameters) as? Object
         }
         
         var coercedParams = try CoerceValuesToSingleType(parameters)
@@ -105,21 +105,21 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
         
         switch coercedType {
         case .Int:
-            return try Call<Int>(coercedParams)
+            return try Call(parametersOfSingleType: coercedParams, type: Int.self) as? Object
         case .Float:
-            return try Call<Float>(coercedParams)
+            return try Call(parametersOfSingleType: coercedParams, type: Float.self) as? Object
         case .String:
-            return try Call<String>(coercedParams)
+            return try Call(parametersOfSingleType: coercedParams, type: String.self) as? Object
         case .DivertTarget:
-            return try Call<Path>(coercedParams)
+            return try Call(parametersOfSingleType: coercedParams, type: Path.self) as? Object
         case .List:
-            return try Call<InkList>(coercedParams)
+            return try Call(parametersOfSingleType: coercedParams, type: InkList.self) as? Object
         default:
             return nil
         }
     }
     
-    public func Call<T>(_ parametersOfSingleType: [some BaseValue<T>]) throws -> (any BaseValue)? {
+    public func Call<T>(parametersOfSingleType: [any BaseValue], type: T.Type) throws -> (any BaseValue)? {
         let param1 = parametersOfSingleType[0]
         let valType = param1.valueType
         
@@ -137,14 +137,14 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
                 var opForType = opForTypeObj as! BinaryOp<T>
                 
                 // Return value unknown until it's evaluated
-                var resultVal: Any? = opForType(param1.value, param2.value)
+                var resultVal: Any? = opForType(param1.value as? T, param2.value as? T)
                 return CreateValue(resultVal)
             }
             
             // Unary
             else {
                 var opForType = opForTypeObj as! UnaryOp<T>
-                var resultVal: Any? = opForType(param1.value)
+                var resultVal: Any? = opForType(param1.value as? T)
                 return CreateValue(resultVal)
             }
         }
@@ -170,32 +170,32 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
         
         // Normal (list * list) operation
         if v1.valueType == .List && v2.valueType == .List {
-            return Call<InkList>([v1, v2])
+            return try Call(parametersOfSingleType: [v1, v2], type: InkList.self)
         }
         
         throw StoryError.cannotPerformBinaryOperation(name: name, lhs: v1.valueType, rhs: v2.valueType)
     }
     
     func CallListIncrementOperation(_ listIntParams: [Object]) -> ListValue {
-        var listVal = listIntParams[0] as? ListValue
-        var intVal = listIntParams[1] as? IntValue
+        let listVal = listIntParams[0] as? ListValue
+        let intVal = listIntParams[1] as? IntValue
         
-        var resultRawList = InkList()
+        let resultRawList = InkList()
         for listItemWithValue in listVal!.value!.internalDict {
-            var listItem = listItemWithValue.key
-            var listItemValue = listItemWithValue.value
+            let listItem = listItemWithValue.key
+            let listItemValue = listItemWithValue.value
             
             // Find + or - operation
-            var intOp = _operationFuncs[.Int] as! BinaryOp<Int>
+            let intOp = _operationFuncs[.Int] as! BinaryOp<Int>
             
             // Return value unknown until evaluated
-            var targetInt = intOp(listItemValue, intVal!.value!) as! Int
+            let targetInt = intOp(listItemValue, intVal!.value!) as! Int
             
             // Find this item's origin (linear search should be ok, should be short haha)
-            var itemOrigin = listVal?.value!.origins.first { $0.name == listItem.originName }
+            let itemOrigin = listVal?.value!.origins.first { $0.name == listItem.originName }
             
             if itemOrigin != nil {
-                if let incrementedItem = itemOrigin?.TryGetItemWithValue(targetInt) {
+                if let incrementedItem = itemOrigin!.TryGetItemWithValue(targetInt) {
                     resultRawList.internalDict[incrementedItem] = targetInt
                 }
             }
@@ -213,7 +213,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
         // use the same type on both sides. e.g. binary operation of
         // int and float causes the int to be casted to a float.
         for obj in parametersIn {
-            var val = obj as! any BaseValue
+            let val = obj as! any BaseValue
             if val.valueType.rawValue > valType.rawValue {
                 valType = val.valueType
             }
@@ -260,6 +260,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
     }
     
     public init(_ name: String) {
+        super.init()
         NativeFunctionCall.GenerateNativeFunctionsIfNecessary()
         self.name = name
     }
@@ -269,6 +270,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
     }
     
     internal init(_ name: String, _ numberOfParameters: Int) {
+        super.init()
         _isPrototype = true
         self.name = name
         self.numberOfParameters = numberOfParameters
@@ -438,7 +440,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
     typealias UnaryOp<T> = (_ val: T?) -> Any?
     
     private var _prototype: NativeFunctionCall?
-    private var _isPrototype: Bool
+    private var _isPrototype: Bool = false
     
     // Operations for each data type, for a single operation (e.g. "+")
     private var _operationFuncs: [ValueType: Any?] = [:]

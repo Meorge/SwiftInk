@@ -7,9 +7,11 @@ public class Container: Object, Nameable {
         get {
             return _content
         }
-        set {
-            AddContent(newValue)
-        }
+        // NOTE: Setter disabled because it can throw and apparently
+        // that's a no-no in Swift. Doesn't look like it's being used anywhere anyways???
+//        set {
+//            AddContent(newValue)
+//        }
     }
     
     private var _content: [Object]
@@ -128,12 +130,15 @@ public class Container: Object, Nameable {
     }
     
     override init() {
+        countingAtStartOnly = false
+        turnIndexShouldBeCounted = false
+        visitsShouldBeCounted = false
         _content = []
         namedContent = [:]
     }
     
     public func AddContent(_ contentObj: Object) throws {
-        content.append(contentObj)
+        _content.append(contentObj)
         
         if contentObj.parent != nil {
             throw StoryError.contentAlreadyHasParent(parent: contentObj.parent!)
@@ -151,7 +156,7 @@ public class Container: Object, Nameable {
     }
     
     public func InsertContent(_ contentObj: Object, _ index: Int) throws {
-        content.insert(contentObj, at: index)
+        _content.insert(contentObj, at: index)
         
         if contentObj.parent != nil {
             throw StoryError.contentAlreadyHasParent(parent: contentObj.parent!)
@@ -177,7 +182,7 @@ public class Container: Object, Nameable {
     }
     
     public func AddContentsOfContainer(_ otherContainer: Container) {
-        content.append(contentsOf: otherContainer.content)
+        _content.append(contentsOf: otherContainer.content)
         for obj in otherContainer.content {
             obj.parent = self
             TryAddNamedContent(obj)

@@ -31,11 +31,11 @@ public class ChoicePoint: Object {
         }
     }
     
-    public var hasCondition: Bool
-    public var hasStartContent: Bool
-    public var hasChoiceOnlyContent: Bool
-    public var onceOnly: Bool
-    public var isInvisibleDefault: Bool
+    public var hasCondition: Bool = false
+    public var hasStartContent: Bool = false
+    public var hasChoiceOnlyContent: Bool = false
+    public var onceOnly: Bool = false
+    public var isInvisibleDefault: Bool = false
     
     public var flags: Int {
         get {

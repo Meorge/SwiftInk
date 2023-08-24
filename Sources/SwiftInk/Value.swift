@@ -12,7 +12,7 @@ public enum ValueType: Int
     case VariablePointer
 }
 
-public protocol BaseValue<T>: Object, Equatable {
+public protocol BaseValue<T>: Equatable {
     associatedtype T = Equatable
     var valueType: ValueType { get }
     var isTruthy: Bool { get }
@@ -20,6 +20,12 @@ public protocol BaseValue<T>: Object, Equatable {
     func Cast(_ newType: ValueType) throws -> (any BaseValue)?
     
     var value: T? { get set }
+}
+
+extension BaseValue {
+    var valueObject: Any? {
+        value as Any?
+    }
 }
 
 public func CreateValue(_ val: Any?) -> (any BaseValue)? {

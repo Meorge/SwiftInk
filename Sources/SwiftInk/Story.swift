@@ -609,7 +609,7 @@ public class Story: Object {
             try Error("Failed to find content at path '\(path)', and no approximation of it was possible.")
         }
         else if result?.approximate ?? false {
-            Warning("Failed to find content at path '\(path)', so it was approximated to '\(result?.obj!.path)'")
+            Warning("Failed to find content at path '\(path)', so it was approximated to '\(result!.obj!.path)'")
         }
         
         return p
@@ -795,7 +795,7 @@ public class Story: Object {
             }
             
             if container.turnIndexShouldBeCounted {
-                try state.RecordTurnIndexVisitToContainer(container)
+                state.RecordTurnIndexVisitToContainer(container)
             }
         }
     }
@@ -966,10 +966,10 @@ public class Story: Object {
                 var varName = currentDivert.variableDivertName
                 var varContents = state.variablesState?.GetVariableWithName(varName)
                 if varContents == nil {
-                    try Error("Tried to divert using a target from a variable that could not be found (\(varName))")
+                    try Error("Tried to divert using a target from a variable that could not be found (\(varName!))")
                 }
                 else if !(varContents is DivertTargetValue) {
-                    var errorMessage = "Tried to divert to a target from a variable, but the variable (\(varName)) didn't contain a divert target, it "
+                    var errorMessage = "Tried to divert to a target from a variable, but the variable (\(varName!)) didn't contain a divert target, it "
                     if let intContent = varContents as? IntValue {
                         errorMessage += "was empty/null (the value 0)."
                     }
@@ -1072,7 +1072,7 @@ public class Story: Object {
                         expected = "end of flow (-> END or choice)"
                     }
                     
-                    var errorMsg = "Found \(names[popType]), when expected \(expected)"
+                    var errorMsg = "Found \(names[popType]!), when expected \(expected!)"
                     try Error(errorMsg)
                 }
                 
@@ -1242,7 +1242,7 @@ public class Story: Object {
                     if target is IntValue {
                         extraNote = ". Did you accidentally pass a read count ('knot_name') instead of a target ('-> knot_name')?"
                     }
-                    try Error("TURNS_SINCE expected a divert target (knot, stitch, label name), but saw \(target)\(extraNote)")
+                    try Error("TURNS_SINCE expected a divert target (knot, stitch, label name), but saw \(target!)\(extraNote)")
                     break
                 }
                 
@@ -1280,15 +1280,7 @@ public class Story: Object {
                 }
                 
                 // +1 because it's inclusive of min and max, for e.g. RANDOM(1,6) for a dice roll.
-                var randomRange: Int
-                do {
-                    // NOTE: Original C# code used checked() here to check for int overflow
-                    randomRange = maxInt.value! - minInt.value! + 1
-                }
-                catch {
-                    randomRange = Int.max
-                    try Error("RANDOM() was called with a range that exceeds the size that ink numbers can use.")
-                }
+                var randomRange = maxInt.value! - minInt.value! + 1
                 if randomRange <= 0 {
                     try Error("RANDOM() was called with minimum as \(minInt.value!) and maximum as \(maxInt.value!). The maximum must be larger")
                 }
@@ -1581,12 +1573,7 @@ public class Story: Object {
     /// - Returns: `true` if the function exists, otherwise `false`.
     /// - Parameter functionName: The name of the function as declared in ink.
     public func HasFunction(_ functionName: String) -> Bool {
-        do {
-            return KnotContainerWithName(functionName) != nil
-        }
-        catch {
-            return false
-        }
+        return KnotContainerWithName(functionName) != nil
     }
     
     /// Evaluates a function defined in ink.
@@ -1944,7 +1931,8 @@ public class Story: Object {
             
             var val = newValue as! (any BaseValue)
             for observer in observers {
-                observer.onVariableChanged?(variableName, nil) // TODO: cast val.value as Any? AHHHHHHH
+                
+                observer.onVariableChanged?(variableName, val.valueObject)
             }
         }
     }

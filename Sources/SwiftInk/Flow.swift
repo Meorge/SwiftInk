@@ -30,12 +30,12 @@ public class Flow {
     // Used both to load old format and current
     public func LoadFlowChoiceThreads(_ jChoiceThreads: [String: Any?], _ story: Story) throws {
         for choice in currentChoices {
-            var foundActiveThread = callStack?.ThreadWithIndex(choice.originalThreadIndex!)
+            let foundActiveThread = callStack?.ThreadWithIndex(choice.originalThreadIndex!)
             if foundActiveThread != nil {
                 choice.threadAtGeneration = foundActiveThread!.Copy()
             }
             else {
-                var jSavedChoiceThread = jChoiceThreads[String(describing: choice.originalThreadIndex!)] as! Dictionary<String, Any?>
+                let jSavedChoiceThread = jChoiceThreads[String(describing: choice.originalThreadIndex!)] as! Dictionary<String, Any?>
                 choice.threadAtGeneration = try CallStack.Thread(jSavedChoiceThread, story)
             }
         }
