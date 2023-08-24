@@ -9,11 +9,11 @@ public class CallStack {
         public var type: PushPopType
         
         /// When this callstack element is actually a function evaluation called from the game, we need to keep track of the size of the evaluation stack when it was called so that we know whether there was any return value.
-        public var evaluationStackHeightWhenPushed: Int
+        public var evaluationStackHeightWhenPushed: Int = 0
         
         // MARK: name misspelled!!! this is UNFORGIVABLE
         /// When functions are called, we trim whitespace from the start and end of what they generate, so we make sure we know where the function's start and end are.
-        public var functionStartInOuputStream: Int
+        public var functionStartInOuputStream: Int = 0
         
         public init(_ type: PushPopType, _ pointer: Pointer, _ inExpressionEvaluation: Bool = false) {
             self.currentPointer = pointer
@@ -33,8 +33,8 @@ public class CallStack {
     
     public class Thread {
         public var callstack: [Element]
-        public var threadIndex: Int
-        public var previousPointer: Pointer
+        public var threadIndex: Int = 0
+        public var previousPointer: Pointer = Pointer.Null
         
         public init() {
             callstack = []
@@ -56,13 +56,13 @@ public class CallStack {
                     currentContainerPathStr = String(describing: currentContainerPathStrToken)
                     
                     var threadPointerResult = storyContext.ContentAtPath(Path(currentContainerPathStr))
-                    pointer.container = threadPointerResult.container
+                    pointer.container = threadPointerResult!.container
                     pointer.index = jElementObj["idx"] as! Int
                     
-                    if threadPointerResult.obj == nil {
+                    if threadPointerResult!.obj == nil {
                         throw StoryError.exactInternalStoryLocationNotFound(pathStr: currentContainerPathStr ?? "nil")
                     }
-                    else if threadPointerResult.approximate {
+                    else if threadPointerResult!.approximate {
                         storyContext.Warning("When loading state, exact internal story location couldn't be found: '\(currentContainerPathStr!)', so it was approximated to '\(pointer.container!.path)' to recover. Has the story changed since this save data was created?")
                     }
                 }
@@ -81,10 +81,9 @@ public class CallStack {
                 callstack.append(el)
             }
             
-            var prevContentObjPath: Any?
             if let prevContentObjPath = jThreadObj["previousContentObject"] {
                 var prevPath = Path(String(describing: prevContentObjPath))
-                previousPointer = storyContext.PointerAtPath(prevPath)
+                previousPointer = try storyContext.PointerAtPath(prevPath)
             }
         }
         
@@ -167,6 +166,8 @@ public class CallStack {
     
     public init(_ storyContext: Story) {
         _startOfRoot = Pointer.StartOf(storyContext.rootContentContainer)
+        self._threads = []
+        self._threadCounter = 0
         Reset()
     }
     

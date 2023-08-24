@@ -70,8 +70,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     public init(_ singleOriginListName: String, _ originStory: Story) {
         SetInitialOriginName(singleOriginListName)
         
-        var def: ListDefinition
-        if originStory.listDefinitions.TryListGetDefinition(singleOriginListName, def) {
+        if let def = originStory.listDefinitions!.TryListGetDefinition(singleOriginListName) {
             origins = [def]
         }
         else {
@@ -443,10 +442,8 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
             maxValue = maxBound as! Int
         }
         else {
-            // TODO: This was translated straight from the C# source but I think it's a bug!
-            // This if statement should be using maxBound instead of minBound I think!!
-            if minBound is InkList && (minBound as! InkList).internalDict.count > 0 {
-                maxValue = (maxBound as! InkList).maxItem.value
+            if maxBound is InkList && (maxBound as! InkList).internalDict.count > 0 {
+                maxValue = (maxBound as! InkList).maxItem!.value
             }
         }
         
