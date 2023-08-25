@@ -40,4 +40,8 @@ public class BoolValue: Object, BaseValue {
     public convenience override init() {
         self.init(false)
     }
+    
+    public var description: String {
+        "\(value!)"
+    }
 }

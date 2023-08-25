@@ -1,6 +1,6 @@
 import Foundation
 
-public class DivertTargetValue: Object, BaseValue, CustomStringConvertible {
+public class DivertTargetValue: Object, BaseValue {
     public var value: Path?
     
     public typealias T = Path

@@ -561,6 +561,7 @@ public class StoryState {
         if let text = obj as? StringValue {
             if let listText = TrySplittingHeadTailWhitespace(text) {
                 for textObj in listText {
+                    print("push individual text '\(textObj)'")
                     PushToOutputStreamIndividual(textObj)
                 }
                 OutputStreamDirty()
@@ -596,6 +597,8 @@ public class StoryState {
         var headLastNewlineIdx = -1
         
         let charArray = Array(str.unicodeScalars)
+        
+        // Look for where the left side starts?
         for i in 0 ..< charArray.count {
             var c = charArray[i]
             if c == "\n" {
@@ -642,7 +645,7 @@ public class StoryState {
         if headFirstNewlineIdx != -1 {
             if headFirstNewlineIdx > 0 {
                 let startIndex = str.index(str.startIndex, offsetBy: innerStrStart)
-                let endIndex = str.index(str.startIndex, offsetBy: innerStrEnd)
+                let endIndex = str.index(str.startIndex, offsetBy: headFirstNewlineIdx)
                 let leadingSpaces = StringValue(String(str[startIndex ..< endIndex]))
                 listTexts.append(leadingSpaces)
             }
@@ -656,7 +659,7 @@ public class StoryState {
         
         if innerStrEnd > innerStrStart {
             let startIndex = str.index(str.startIndex, offsetBy: innerStrStart)
-            let endIndex = str.index(str.endIndex, offsetBy: -innerStrEnd)
+            let endIndex = str.index(str.startIndex, offsetBy: innerStrEnd)
             var innerStrText = String(str[startIndex ..< endIndex])
             listTexts.append(StringValue(innerStrText))
         }
@@ -904,6 +907,9 @@ public class StoryState {
                 }
             }
         }
+        
+        // MARK: Maybe issue here due to object vs struct tomfoolery in Swift, when dealing with lists?
+        evaluationStack.append(obj)
     }
     
     public func PopEvaluationStack() -> Object? {

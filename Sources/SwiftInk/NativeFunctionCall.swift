@@ -393,7 +393,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
     static func AddOpToNativeFunc(_ name: String, _ args: Int, _ valType: ValueType, _ op: Any?) {
         var nativeFunc: NativeFunctionCall? = nil
         
-        if _nativeFunctions.keys.contains(name) {
+        if !_nativeFunctions.keys.contains(name) {
             nativeFunc = NativeFunctionCall(name, args)
             _nativeFunctions[name] = nativeFunc
         }

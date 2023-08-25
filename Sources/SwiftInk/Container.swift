@@ -8,7 +8,7 @@ public class Container: Object, Nameable {
             return _content
         }
         // NOTE: Setter disabled because it can throw and apparently
-        // that's a no-no in Swift. Doesn't look like it's being used anywhere anyways???
+        // that's a no-no in Swift.
 //        set {
 //            AddContent(newValue)
 //        }

@@ -71,4 +71,8 @@ public class ListValue: Object, BaseValue {
             newList!.value!.SetInitialOriginNames(oldList!.value?.originNames)
         }
     }
+    
+    public var description: String {
+        "\(value!)"
+    }
 }

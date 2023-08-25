@@ -275,6 +275,7 @@ func JTokenToListDefinitions(_ obj: Any?) -> ListDefinitionsOrigin {
 
 func JTokenToRuntimeObject(_ token: Any?) throws -> Object? {
     if token is Int || token is Float || token is Double || token is Bool {
+        print("Token is \(token) (\(type(of: token))) so using CreateValue")
         return CreateValue(token) as! Object
     }
     

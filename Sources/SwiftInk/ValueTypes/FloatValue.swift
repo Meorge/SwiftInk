@@ -40,4 +40,8 @@ public class FloatValue: Object, BaseValue {
     public convenience override init() {
         self.init(0.0)
     }
+    
+    public var description: String {
+        "\(value!)"
+    }
 }

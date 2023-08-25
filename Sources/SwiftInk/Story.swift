@@ -734,7 +734,14 @@ public class Story: Object {
         // Stop flow if we hit a stack pop when we're unable to pop (e.g. return/done statement in knot
         // that was diverted to rather than called as a function)
         var currentContentObj = pointer.Resolve()
+        print("Current content object is '\(currentContentObj!)', type \(type(of: currentContentObj!))")
+        if currentContentObj is ControlCommand {
+            print("\t\((currentContentObj as! ControlCommand).commandType)")
+        }
+        
+        print("Gonna try to perform logic and flow control...")
         var isLogicOrFlowControl = try PerformLogicAndFlowControl(currentContentObj)
+        print("Done performing logic and flow control! isLogicOrFlowControl=\(isLogicOrFlowControl)")
         
         // Has flow been forced to end by flow control above?
         if state.currentPointer.isNull {
@@ -763,6 +770,7 @@ public class Story: Object {
         
         // Content to add to evaluation stack or the output stream
         if shouldAddToStream {
+            print("This content should be added to a stream")
             // If we're pushing a variable pointer onto the evaluation stack, ensure that it's specific
             // to our current (possibly temporary) context index. And make a copy of the pointer
             // so that we're not editing the original runtime object.
@@ -774,11 +782,13 @@ public class Story: Object {
             
             // Expression evaluation content
             if state.inExpressionEvaluation {
+                print("Add this content to the evaluation stack")
                 state.PushEvaluationStack(currentContentObj!)
             }
             
             // Output stream content (i.e. not expression evaluation)
             else {
+                print("Add this content to the output stream")
                 state.PushToOutputStream(currentContentObj!)
             }
         }
@@ -957,6 +967,8 @@ public class Story: Object {
         }
         
         
+        
+        
         // Divert
         if let currentDivert = contentObj as? Divert {
             if currentDivert.isConditional {
@@ -1027,16 +1039,19 @@ public class Story: Object {
                 state.inExpressionEvaluation = false
                 break
             case .evalOutput:
+                print("EVALUATE OUTPUT! Evaluation stack is \(state.evaluationStack)")
                 // If the expression turned out to be empty, there may not be anything on the stack
                 if !state.evaluationStack.isEmpty {
                     var output = state.PopEvaluationStack()
                     
+                    print("Output from evaluation stack is \(output)")
                     // Functions may evaluate to Void, in which case we skip output
                     if !(output is Void) {
                         // TODO: Should we really always blanket convert to string?
                         // It would be okay to have numbers in the output stream, the
                         // only problem is when exporting text for viewing, it skips over numbers etc.
-                        var text = StringValue(String(describing: output))
+                        var text = StringValue(String(describing: output!))
+                        print("evalOutput is done! the text we got was '\(text)'")
                         state.PushToOutputStream(text)
                     }
                 }

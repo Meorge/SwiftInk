@@ -61,7 +61,7 @@ final class SwiftInkTests: XCTestCase {
 }
 """
         let s = try Story(jsonString)
-        let result = try! s.Continue()
+        let result = try! s.ContinueMaximally()
         print("The Result: '\(result)'")
         XCTAssert(result == "42\n")
     }
@@ -249,7 +249,7 @@ final class SwiftInkTests: XCTestCase {
 }
 """
         let s = try Story(jsonString)
-        let result = try! s.Continue()
+        let result = try! s.ContinueMaximally()
         print("B006 output: '\(result)'")
         XCTAssert(result == """
 This is not printed:
@@ -264,7 +264,7 @@ Neither is this:
   "inkVersion": 19,
   "root": [
 
-    "^\"string\" + 1 =  ",
+    "^\\"string\\" + 1 =  ",
     "ev",
     "^string",
     1,
@@ -273,7 +273,7 @@ Neither is this:
     "out",
     "\\n",
 
-    "^1 + \"string\" =  ",
+    "^1 + \\"string\\" =  ",
     "ev",
     1,
     "^string",
@@ -282,7 +282,7 @@ Neither is this:
     "out",
     "\\n",
 
-    "^\"foo\" + \"bar\" =  ",
+    "^\\"foo\\" + \\"bar\\" =  ",
     "ev",
     "^foo",
     "^bar",
@@ -291,7 +291,7 @@ Neither is this:
     "out",
     "\\n",
 
-    "^\"string\" + 1.125  =  ",
+    "^\\"string\\" + 1.125  =  ",
     "ev",
     "^string",
     1.125,
@@ -300,7 +300,7 @@ Neither is this:
     "out",
     "\\n",
 
-    "^1.125 + \"string\"  =  ",
+    "^1.125 + \\"string\\"  =  ",
     "ev",
     1.125,
     "^string",
@@ -309,7 +309,7 @@ Neither is this:
     "out",
     "\\n",
 
-    "^\"42\" == 42 =  ",
+    "^\\"42\\" == 42 =  ",
     "ev",
     "^42",
     42,
@@ -318,9 +318,9 @@ Neither is this:
     "+",
     "/ev",
     "out",
-    "\n",
+    "\\n",
 
-    "^42 == \"42\" =  ",
+    "^42 == \\"42\\" =  ",
     "ev",
     42,
     "^42",
@@ -331,7 +331,7 @@ Neither is this:
     "out",
     "\\n",
 
-    "^\"42\" == 43 =  ",
+    "^\\"42\\" == 43 =  ",
     "ev",
     "^42",
     43,
@@ -342,7 +342,7 @@ Neither is this:
     "out",
     "\\n",
 
-    "^43 == \"42\" =  ",
+    "^43 == \\"42\\" =  ",
     "ev",
     43,
     "^42",
@@ -353,7 +353,7 @@ Neither is this:
     "out",
     "\\n",
 
-    "^\"42\" != 42 =  ",
+    "^\\"42\\" != 42 =  ",
     "ev",
     "^42",
     42,
@@ -364,7 +364,7 @@ Neither is this:
     "out",
     "\\n",
 
-    "^42 != \"42\" =  ",
+    "^42 != \\"42\\" =  ",
     "ev",
     42,
     "^42",
@@ -375,7 +375,7 @@ Neither is this:
     "out",
     "\\n",
 
-    "^43 != \"42\" =  ",
+    "^43 != \\"42\\" =  ",
     "ev",
     43,
     "^42",
@@ -386,7 +386,7 @@ Neither is this:
     "out",
     "\\n",
 
-    "^\"42\" != 43 =  ",
+    "^\\"42\\" != 43 =  ",
     "ev",
     "^42",
     43,

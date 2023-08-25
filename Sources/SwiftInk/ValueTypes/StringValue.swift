@@ -63,4 +63,8 @@ public class StringValue: Object, BaseValue {
         
         throw StoryError.badCast(valueObject: self, sourceType: valueType, targetType: newType)
     }
+    
+    public var description: String {
+        "\(value!)"
+    }
 }
