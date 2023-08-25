@@ -2027,7 +2027,7 @@ public class Story: Object {
         state.previousPointer = state.currentPointer
         
         // Divert step?
-        if !state.divertedPointer!.isNull {
+        if state.divertedPointer != nil && !(state.divertedPointer!.isNull) {
             state.currentPointer = state.divertedPointer!
             state.divertedPointer = Pointer.Null
             

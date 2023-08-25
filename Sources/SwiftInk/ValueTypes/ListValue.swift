@@ -63,7 +63,7 @@ public class ListValue: Object, BaseValue {
         value = InkList((singleItem, singleValue))
     }
     
-    public static func RetainListOriginsForAssignment(_ oldValue: Object, _ newValue: Object) {
+    public static func RetainListOriginsForAssignment(_ oldValue: Object?, _ newValue: Object?) {
         var oldList = oldValue as? ListValue
         var newList = newValue as? ListValue
         

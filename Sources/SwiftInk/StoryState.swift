@@ -549,7 +549,7 @@ public class StoryState {
     
     public func ResetOutput(_ objs: [Object]? = nil) {
         _currentFlow.outputStream = []
-        if objs == nil {
+        if objs != nil {
             _currentFlow.outputStream.append(contentsOf: objs!)
         }
         OutputStreamDirty()
@@ -656,7 +656,7 @@ public class StoryState {
         
         if innerStrEnd > innerStrStart {
             let startIndex = str.index(str.startIndex, offsetBy: innerStrStart)
-            let endIndex = str.index(str.endIndex, offsetBy: innerStrEnd)
+            let endIndex = str.index(str.endIndex, offsetBy: -innerStrEnd)
             var innerStrText = String(str[startIndex ..< endIndex])
             listTexts.append(StringValue(innerStrText))
         }
@@ -706,23 +706,25 @@ public class StoryState {
             // If we're in string eval within the current function, we
             // don't want to trim back further than the length of the current string.
             var glueTrimIndex = -1
-            for i in (0 ... outputStream.count - 1).reversed() {
-                var o = outputStream[i]
-                var c = o as? ControlCommand
-                var g = o as? Glue
-                
-                // Find latest glue
-                if g != nil {
-                    glueTrimIndex = i
-                    break
-                }
-                
-                // Don't function-trim past the start of a string evaluation section
-                else if c != nil && c?.commandType == .beginString {
-                    if i >= functionTrimIndex {
-                        functionTrimIndex = -1
+            if !outputStream.isEmpty {
+                for i in (0 ... outputStream.count - 1).reversed() {
+                    var o = outputStream[i]
+                    var c = o as? ControlCommand
+                    var g = o as? Glue
+                    
+                    // Find latest glue
+                    if g != nil {
+                        glueTrimIndex = i
+                        break
                     }
-                    break
+                    
+                    // Don't function-trim past the start of a string evaluation section
+                    else if c != nil && c?.commandType == .beginString {
+                        if i >= functionTrimIndex {
+                            functionTrimIndex = -1
+                        }
+                        break
+                    }
                 }
             }
             
@@ -871,6 +873,10 @@ public class StoryState {
     }
     
     public var inStringEvaluation: Bool {
+        if outputStream.isEmpty {
+            return false
+        }
+        
         for i in (0...outputStream.count-1).reversed() {
             if let cmd = outputStream[i] as? ControlCommand, cmd.commandType == .beginString {
                 return true

@@ -301,7 +301,7 @@ public class CallStack {
         }
         
         if let oldValue = contextElement.temporaryVariables[name] {
-            ListValue.RetainListOriginsForAssignment(oldValue!, value!)
+            ListValue.RetainListOriginsForAssignment(oldValue, value)
         }
         
         contextElement.temporaryVariables[name] = value

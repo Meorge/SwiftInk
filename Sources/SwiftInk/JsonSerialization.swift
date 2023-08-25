@@ -274,7 +274,7 @@ func JTokenToListDefinitions(_ obj: Any?) -> ListDefinitionsOrigin {
 }
 
 func JTokenToRuntimeObject(_ token: Any?) throws -> Object? {
-    if token is Int || token is Float || token is Bool {
+    if token is Int || token is Float || token is Double || token is Bool {
         return CreateValue(token) as! Object
     }
     
@@ -403,6 +403,8 @@ func JTokenToRuntimeObject(_ token: Any?) throws -> Object? {
                     divert.externalArgs = p as! Int
                 }
             }
+            
+            return divert
         }
         
         if let p = obj["*"] {
@@ -411,6 +413,7 @@ func JTokenToRuntimeObject(_ token: Any?) throws -> Object? {
             choice.pathStringOnChoice = String(describing: propValue)
             
             if let p = obj["flg"] {
+                propValue = p
                 choice.flags = propValue as! Int
             }
             

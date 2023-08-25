@@ -36,7 +36,7 @@ public func CreateValue(_ val: Any?) -> Object? {
         return IntValue(val as! Int)
     }
     else if val is Float || val is Double {
-        return FloatValue(val as! Float)
+        return FloatValue(Float(val as! Double))
     }
     else if val is String {
         return StringValue(val as! String)
