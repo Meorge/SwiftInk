@@ -44,7 +44,9 @@ public class ControlCommand: Object {
         self.init(.notSet)
     }
     
-    // TODO: Copy
+    public func Copy() -> ControlCommand {
+        return ControlCommand(commandType)
+    }
     
     // NOTE: The original C# code has a bunch of static methods here for
     // making code more succinct. Luckily, Swift's dot syntax for enums

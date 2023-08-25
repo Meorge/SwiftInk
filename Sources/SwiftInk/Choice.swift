@@ -13,6 +13,16 @@ public class Choice : Object {
         }
     }
     
+    public func WriteJson() -> [String: Any?] {
+        [
+            "text": text,
+            "index": index,
+            "originalChoicePath": sourcePath,
+            "originalThreadIndex": originalThreadIndex,
+            "targetPath": pathStringOnChoice
+        ]
+    }
+    
     /// Get the path to the original choice point - where was this choice defined in the story?
     public var sourcePath: String?
     

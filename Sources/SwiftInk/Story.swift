@@ -32,7 +32,7 @@ public class Story: Object {
     public var currentChoices: [Choice] {
         // Don't include invisible choices for external usage.
         var choices: [Choice] = []
-        for c in _state.currentChoices {
+        for c in state.currentChoices {
             if !(c.isInvisibleDefault ?? false) {
                 c.index = choices.count
                 choices.append(c)
@@ -109,7 +109,7 @@ public class Story: Object {
     /// - The callstack and evaluation stacks
     /// - The current threads
     public var state: StoryState {
-        _state
+        _state!
     }
     
     public var delegate: StoryEventHandler? = nil
@@ -149,7 +149,7 @@ public class Story: Object {
         self.init(nil)
         
         // TODO: Swift should be able to handle this well!
-        var rootObject: [String: Any?] = SimpleJson.TextToDictionary(jsonString)
+        var rootObject: [String: Any?] = try TextToDictionary(jsonString)!
         
         guard let formatFromFile = rootObject["inkVersion"] as? Int else {
             throw StoryError.inkVersionNotFound
@@ -171,29 +171,35 @@ public class Story: Object {
         }
         
         if let listDefsObj = rootObject["listDefs"] {
-            _listDefinitions = Json.JTokenToListDefinitions(listDefsObj)
+            _listDefinitions = JTokenToListDefinitions(listDefsObj)
         }
         
-        _mainContentContainer = Json.JTokenToRuntimeObject(rootToken) as! Container
+        _mainContentContainer = try JTokenToRuntimeObject(rootToken) as! Container
         
-        ResetState()
+        try ResetState()
     }
     
-    // TODO: Complete!
-    /// Returns a JSON string representing the story itself.
-    public func ToJson() -> String {
-        return ""
-    }
-    
-    // TODO: Complete!
-    /// Writes a JSON string representing the story itself to a stream.
-    public func ToJson(_ stream: Stream) {
+    func ToJson() -> [String: Any?] {
+        var output: [String: Any?] = [:]
+        output["inkVersion"] = inkVersionCurrent
+        output["root"] = WriteRuntimeContainer(_mainContentContainer!)
         
-    }
-    
-    // TODO: Complete!
-    func ToJson(_ writer: JSONEncoder) {
+        // List definitions
+        if _listDefinitions != nil {
+            var listDefs: [String: Any?] = [:]
+            
+            for def in _listDefinitions!.lists {
+                var defJson: [String: Any?] = [:]
+                for itemToVal in def.items {
+                    var item = itemToVal.key
+                    var val = itemToVal.value
+                    defJson[item.itemName!] = val
+                }
+                listDefs[def.name] = defJson
+            }
+        }
         
+        return output
     }
     
     /// Reset the story back to its initial state as it was when it was first constructed.
@@ -202,13 +208,13 @@ public class Story: Object {
         try IfAsyncWeCant("ResetState")
         
         _state = StoryState(self)
-        _state.variablesState!.variableChangedEvent = VariableStateDidChangeEvent
+        state.variablesState!.variableChangedEvent = VariableStateDidChangeEvent
         
         try ResetGlobals()
     }
     
     func ResetErrors() {
-        _state.ResetErrors()
+        state.ResetErrors()
     }
     
     /// Unwinds the callstack.
@@ -220,7 +226,7 @@ public class Story: Object {
     /// issues if, for example, the story was in a tunnel already.
     public func ResetCallstack() throws {
         try IfAsyncWeCant("ResetCallstack")
-        _state.ForceEnd()
+        state.ForceEnd()
     }
     
     func ResetGlobals() throws {
@@ -308,14 +314,14 @@ public class Story: Object {
                 throw StoryError.cannotContinue
             }
             
-            _state.didSafeExit = false
-            _state.ResetOutput()
+            state.didSafeExit = false
+            state.ResetOutput()
             
             // It's possible for ink to call game to call ink to call game etc
             // In this case, we only want to batch observe variable changes
             // for the outermost call
             if _recursiveContinueCount == 1 {
-                _state.variablesState?.StartBatchObservingVariableChanges()
+                state.variablesState?.StartBatchObservingVariableChanges()
             }
         }
         
@@ -385,7 +391,7 @@ public class Story: Object {
             _sawLookaheadUnsafeFunctionAfterNewline = false
             
             if _recursiveContinueCount == 1 {
-                try _state.variablesState?.StopBatchObservingVariableChanges()
+                try state.variablesState?.StopBatchObservingVariableChanges()
             }
             
             _asyncContinueActive = false
@@ -621,7 +627,7 @@ public class Story: Object {
     // - _state (current, being patched)
     func StateSnapshot() {
         _stateSnapshotAtLastNewline = _state
-        _state = _state.CopyAndStartPatching()
+        _state = state.CopyAndStartPatching()
     }
     
     func RestoreStateSnapshot() {
@@ -639,7 +645,7 @@ public class Story: Object {
         // active, we need to apply any changes made since
         // the save was started but before the snapshot was made.
         if !_asyncSaving {
-            _state.ApplyAnyPatch()
+            state.ApplyAnyPatch()
         }
     }
     
@@ -650,7 +656,7 @@ public class Story: Object {
         // saving, we simply stay in a "patching" state,
         // albeit with the newer cloned patch.
         if !_asyncSaving {
-            _state.ApplyAnyPatch()
+            state.ApplyAnyPatch()
         }
         
         // No longer need the snapshot.
@@ -671,9 +677,9 @@ public class Story: Object {
             throw StoryError.cantSaveOnBackgroundThreadTwice
         }
         var stateToSave = _state
-        _state = _state.CopyAndStartPatching()
+        _state = state.CopyAndStartPatching()
         _asyncSaving = true
-        return stateToSave
+        return stateToSave!
     }
     
     /// Releases the "frozen" save state started by `CopyStateForBackgroundThreadSave()`,
@@ -690,7 +696,7 @@ public class Story: Object {
         // apply the looked-ahead changes OR it may simply apply the changes
         // made during the save process to the old _stateSnapshotAtLastNewline state.
         if _stateSnapshotAtLastNewline == nil {
-            _state.ApplyAnyPatch()
+            state.ApplyAnyPatch()
         }
         _asyncSaving = false
     }
@@ -1273,10 +1279,12 @@ public class Story: Object {
             case .random:
                 guard var maxInt = state.PopEvaluationStack() as? IntValue else {
                     try Error("Invalid value for maximum parameter of RANDOM(min, max)")
+                    return false
                 }
                 
                 guard var minInt = state.PopEvaluationStack() as? IntValue else {
                     try Error("Invalid value for minimum parameter of RANDOM(min, max)")
+                    return false
                 }
                 
                 // +1 because it's inclusive of min and max, for e.g. RANDOM(1,6) for a dice roll.
@@ -1286,9 +1294,9 @@ public class Story: Object {
                 }
                 
                 var resultSeed = state.storySeed + state.previousRandom
-                var random = Random(resultSeed)
+                var random = Random(withSeed: resultSeed)
                 
-                var nextRandom = random.Next()
+                var nextRandom = Int(random.next())
                 var chosenValue = (nextRandom % randomRange) + minInt.value!
                 state.PushEvaluationStack(IntValue(chosenValue))
                 
@@ -1299,6 +1307,7 @@ public class Story: Object {
             case .seedRandom:
                 guard let seed = state.PopEvaluationStack() as? IntValue else {
                     try Error("Invalid value passed to SEED_RANDOM()")
+                    return false
                 }
                 
                 // Story seed affects both RANDOM and shuffle behavior
@@ -1310,12 +1319,12 @@ public class Story: Object {
                 break
                 
             case .visitIndex:
-                var count = state.VisitCountForContainer(state.currentPointer.container!) - 1 // index not count
+                var count = try state.VisitCountForContainer(state.currentPointer.container!) - 1 // index not count
                 state.PushEvaluationStack(IntValue(count))
                 break
                 
             case .sequenceShuffleIndex:
-                var shuffleIndex = NextSequenceShuffleIndex()
+                var shuffleIndex = try NextSequenceShuffleIndex()
                 state.PushEvaluationStack(IntValue(shuffleIndex))
                 break
                 
@@ -1382,8 +1391,7 @@ public class Story: Object {
                 }
                 
                 // TODO: FIX THIS!
-//                var result = targetList!.value!.ListWithSubrange(min?.value, max?.value)
-                var result: InkList
+                var result = targetList!.value!.ListWithSubrange(min?.valueObject, max?.valueObject)
                 state.PushEvaluationStack(ListValue(result))
                 break
                 
@@ -1404,9 +1412,9 @@ public class Story: Object {
                 // Non-empty source list
                 else {
                     var resultSeed = state.storySeed + state.previousRandom
-                    var random = Random(resultSeed)
+                    var random = Random(withSeed: resultSeed)
                     
-                    var nextRandom = random.Next()
+                    var nextRandom = Int(random.next())
                     var listItemIndex = nextRandom % list.count
                     
                     // Iterate through to get the random element
@@ -1427,7 +1435,7 @@ public class Story: Object {
                 break
                 
             default:
-                Error("unhandled ControlCommand: \(evalCommand)")
+                try Error("unhandled ControlCommand: \(evalCommand)")
                 break
             }
             
@@ -1453,7 +1461,7 @@ public class Story: Object {
             // Explicit read count value
             if varRef.pathForCount != nil {
                 var container = varRef.containerForCount
-                var count = state.VisitCountForContainer(container!)
+                var count = try state.VisitCountForContainer(container!)
                 foundValue = IntValue(count)
             }
             
@@ -1474,7 +1482,7 @@ public class Story: Object {
         // Native function call
         else if let function = contentObj as? NativeFunctionCall {
             var funcParams = try state.PopEvaluationStack(function.numberOfParameters)
-            var result = function.Call(funcParams)
+            var result = try function.Call(funcParams)
             state.PushEvaluationStack(result!)
             return true
         }
@@ -1609,7 +1617,7 @@ public class Story: Object {
         
         // Snapshot the output stream
         var outputStreamBefore = state.outputStream
-        _state.ResetOutput()
+        state.ResetOutput()
         
         // State will temporarily replace the callstack in order to evaluate
         try state.StartFunctionEvaluationFromGame(funcContainer, arguments)
@@ -1623,7 +1631,7 @@ public class Story: Object {
         
         // Restore the output stream in case this was called
         // during main story evaluation
-        _state.ResetOutput(outputStreamBefore)
+        state.ResetOutput(outputStreamBefore)
         
         // Finish evaluation, and see whether anything was produced
         var result = try state.CompleteFunctionEvaluationFromGame()
@@ -1671,24 +1679,23 @@ public class Story: Object {
     public var allowExternalFunctionFallbacks: Bool = false
     
     public func CallExternalFunction(_ funcName: String, _ numberOfArguments: Int) throws {
-        var funcDef: ExternalFunctionDef
         var fallbackFunctionContainer: Container? = nil
         
-        let foundExternal = _externals[funcName]
-        if foundExternal != nil && !funcDef.lookaheadSafe && state.inStringEvaluation {
+        let funcDef = _externals[funcName]
+        if funcDef != nil && !funcDef!.lookaheadSafe && state.inStringEvaluation {
             try Error("External function \(funcName) could not be called because 1) it wasn't marked as lookaheadSafe when BindExternalFunction was called and 2) the story is in the middle of string generation, either because text is being generated, or because you have ink like \"hello {func()}\". You can work around this by generating the result of your function into a temporary variable before the string or choice gets generated: '~temp x = \(funcName)()")
             return
         }
         
         // Should this function break glue? Abort run if we've already seen a newline.
         // Set a bool to tell it to restore the snapshot at the end of this instruction.
-        if foundExternal != nil && !funcDef.lookaheadSafe && _stateSnapshotAtLastNewline != nil {
+        if funcDef != nil && !funcDef!.lookaheadSafe && _stateSnapshotAtLastNewline != nil {
             _sawLookaheadUnsafeFunctionAfterNewline = true
             return
         }
         
         // Try to use fallback function?
-        if foundExternal == nil {
+        if funcDef == nil {
             if allowExternalFunctionFallbacks {
                 fallbackFunctionContainer = KnotContainerWithName(funcName)
                 try Assert(fallbackFunctionContainer != nil, "Trying to call EXTERNAL function '\(funcName)' which has not been bound, and fallback ink function could not be found.")
@@ -1707,8 +1714,7 @@ public class Story: Object {
         var arguments: [Any?] = []
         for _ in 0 ..< numberOfArguments {
             var poppedObj = state.PopEvaluationStack() as? (any BaseValue)
-            // TODO: Figure this thing out argh
-//            arguments.append(poppedObj?.value)
+            arguments.append(poppedObj?.valueObject)
         }
         
         // Reverse arguments from the order they were popped,
@@ -1716,7 +1722,7 @@ public class Story: Object {
         arguments.reverse()
         
         // Run the function!
-        var funcResult = funcDef.function(arguments)
+        var funcResult = funcDef!.function(arguments)
         
         // Convert return value (if any) to a type that the ink engine can use
         var returnObj: Object? = nil
@@ -1923,7 +1929,7 @@ public class Story: Object {
         }
     }
     
-    func VariableStateDidChangeEvent(_ variableName: String, _ newValue: Object?) throws -> Void {
+    func VariableStateDidChangeEvent(_ variableName: String, _ newValue: Object?) throws {
         if let observers = _variableObservers[variableName] {
             if !(newValue is (any BaseValue)) {
                 throw StoryError.variableNotStandardType
@@ -2110,7 +2116,7 @@ public class Story: Object {
     
 
     func TryFollowDefaultInvisibleChoice() throws -> Bool {
-        var allChoices = _state.currentChoices
+        var allChoices = state.currentChoices
         
         // Is a default invisible choice the ONLY choice?
         var invisibleChoices = allChoices.filter({ $0.isInvisibleDefault! })
@@ -2165,7 +2171,7 @@ public class Story: Object {
         }
         
         var randomSeed = sequenceHash + loopIndex + state.storySeed
-        var random = Random(randomSeed)
+        var random = Random(withSeed: randomSeed)
         
         var unpickedIndices: [Int] = []
         for i in 0 ..< numElements {
@@ -2173,7 +2179,7 @@ public class Story: Object {
         }
         
         for i in 0 ... iterationIndex {
-            var chosen = random.Next() % unpickedIndices.count
+            var chosen = Int(random.next()) % unpickedIndices.count
             var chosenIndex = unpickedIndices[chosen]
             unpickedIndices.remove(at: chosen)
             
@@ -2288,13 +2294,13 @@ public class Story: Object {
     
     private var _externals: [String: ExternalFunctionDef] = [:]
     private var _variableObservers: [String: [VariableChangeHandler]] = [:]
-    private var _hasValidatedExternals: Bool
+    private var _hasValidatedExternals: Bool = false
     
     private var _temporaryEvaluationContainer: Container?
     
-    private var _state: StoryState
+    private var _state: StoryState? = nil
     
-    private var _asyncContinueActive: Bool
+    private var _asyncContinueActive: Bool = false
     private var _stateSnapshotAtLastNewline: StoryState? = nil
     private var _sawLookaheadUnsafeFunctionAfterNewline: Bool = false
     

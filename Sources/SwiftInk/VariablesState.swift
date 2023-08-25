@@ -1,7 +1,7 @@
 import Foundation
 
 public class VariablesState: Sequence {
-    public typealias VariableChanged = (_ variableName: String, _ newValue: Object?) throws -> Void
+    public typealias VariableChanged = (_ variableName: String, _ newValue: Object?) throws -> Swift.Void
     
     public class VariablesStateChangeHandler: Equatable, Hashable {
         public static func == (lhs: VariablesStateChangeHandler, rhs: VariablesStateChangeHandler) -> Bool {
@@ -95,7 +95,7 @@ public class VariablesState: Sequence {
             
         }
         
-        SetGlobal(variableName, val!)
+        SetGlobal(variableName, val! as! Object)
     }
     
     /// Iterator to allow iteration over all global variables by name.
@@ -128,12 +128,12 @@ public class VariablesState: Sequence {
         patch = nil
     }
     
-    public func SetJsonToken(_ jToken: [String: Any?]) {
+    public func SetJsonToken(_ jToken: [String: Any?]) throws {
         _globalVariables.removeAll()
         
         for varVal in _defaultGlobalVariables {
             if let loadedToken = jToken[varVal.key] {
-                _globalVariables[varVal.key] = Json.JTokenToRuntimeObject(loadedToken)
+                _globalVariables[varVal.key] = try JTokenToRuntimeObject(loadedToken)
             }
             else {
                 _globalVariables[varVal.key] = varVal.value

@@ -5,7 +5,7 @@ public class CallStack {
         public var currentPointer: Pointer
         
         public var inExpressionEvaluation: Bool
-        public var temporaryVariables: [String: Object]
+        public var temporaryVariables: [String: Object?]
         public var type: PushPopType
         
         /// When this callstack element is actually a function evaluation called from the game, we need to keep track of the size of the evaluation stack when it was called so that we know whether there was any return value.
@@ -40,12 +40,12 @@ public class CallStack {
             callstack = []
         }
         
-        public convenience init(_ jThreadObj: [String: Any], _ storyContext: Story) throws {
+        public convenience init(_ jThreadObj: [String: Any?], _ storyContext: Story) throws {
             self.init()
             
-            var jThreadCallstack = jThreadObj["callstack"] as! Array<Any>
+            var jThreadCallstack = jThreadObj["callstack"] as! Array<Any?>
             for jElTok in jThreadCallstack {
-                var jElementObj = jElTok as! Dictionary<String, Any>
+                var jElementObj = jElTok as! Dictionary<String, Any?>
                 var pushPopType = PushPopType(rawValue: jElementObj["type"] as! Int)
                 
                 var pointer = Pointer.Null
@@ -73,6 +73,7 @@ public class CallStack {
                 
                 if let temps = jElementObj["temp"] {
                     // TODO: Handle the JSON stuff in here!!
+                    el.temporaryVariables = try JObjectToDictionaryRuntimeObjs(temps as! [String : Any?])
                 }
                 else {
                     el.temporaryVariables = [:]
@@ -112,8 +113,7 @@ public class CallStack {
                     if !el.temporaryVariables.isEmpty {
                         var tempVars: [String: Any?] = [:]
                         for kvPair in el.temporaryVariables {
-                            // TODO: Fix this after fixing BaseValue
-//                            tempVars[kvPair.key] = (kvPair.value as! (BaseValue)).value
+                            tempVars[kvPair.key] = (kvPair.value as! (any BaseValue)).valueObject
                         }
                         obj["temp"] = tempVars
                     }
@@ -187,12 +187,26 @@ public class CallStack {
         _threads[0].callstack.append(Element(.Tunnel, _startOfRoot))
     }
     
-    public func SetJsonToken(_ jObject: [String: Any?], _ storyContext: Story) {
-        // TODO: Implement!
+    public func SetJsonToken(_ jObject: [String: Any?], _ storyContext: Story) throws {
+        _threads = []
+        
+        var jThreads = jObject["threads"] as! [Any?]
+        
+        for jThreadTok in jThreads {
+            var jThreadObj = jThreadTok as! [String: Any?]
+            var thread = try Thread(jThreadObj, storyContext)
+            _threads.append(thread)
+        }
+        
+        _threadCounter = jObject["threadCounter"] as! Int
+        _startOfRoot = Pointer.StartOf(storyContext.rootContentContainer)
     }
     
-    public func WriteJson() {
-        // TODO: Implement!
+    public func WriteJson() -> [String: Any?] {
+        return [
+            "threads": _threads.map({ $0.WriteJson() }),
+            "threadCounter": _threadCounter
+        ]
     }
     
     public func PushThread() {
@@ -287,7 +301,7 @@ public class CallStack {
         }
         
         if let oldValue = contextElement.temporaryVariables[name] {
-            ListValue.RetainListOriginsForAssignment(oldValue, value!)
+            ListValue.RetainListOriginsForAssignment(oldValue!, value!)
         }
         
         contextElement.temporaryVariables[name] = value

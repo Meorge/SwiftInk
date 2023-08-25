@@ -14,6 +14,10 @@ public class Container: Object, Nameable {
 //        }
     }
     
+    public func SetContent(_ newValue: [Object]) throws {
+        try AddContent(newValue)
+    }
+    
     private var _content: [Object]
     
     public var namedContent: [String: Nameable]

@@ -28,7 +28,7 @@ extension BaseValue {
     }
 }
 
-public func CreateValue(_ val: Any?) -> (any BaseValue)? {
+public func CreateValue(_ val: Any?) -> Object? {
     if val is Bool {
         return BoolValue(val as! Bool)
     }

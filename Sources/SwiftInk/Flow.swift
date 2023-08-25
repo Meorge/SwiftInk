@@ -13,19 +13,42 @@ public class Flow {
         self.currentChoices = []
     }
     
-    public init(_ name: String, _ story: Story, _ jObject: [String: Any?]) {
+    public init(_ name: String, _ story: Story, _ jObject: [String: Any?]) throws {
         self.name = name
         self.callStack = CallStack(story)
-        self.callStack!.SetJsonToken(jObject["callstack"] as! Dictionary<String, Any?>, story)
-        self.outputStream = Json.JArrayToRuntimeObjList(jObject["outputStream"] as! Array<Any?>)
-        self.currentChoices = Json.JArrayToRuntimeObjList<Choice>(jObject["currentChoices"] as! Array<Any?>)
+        try self.callStack!.SetJsonToken(jObject["callstack"] as! [String : Any?], story)
+        self.outputStream = try JArrayToRuntimeObjList(jObject["outputStream"] as! [Any?])
+        self.currentChoices = try JArrayToRuntimeObjList(jObject["currentChoices"] as! [Any?]).map { $0 as! Choice }
         
         // choiceThreads is optional
         var jChoiceThreadsObj = jObject["choiceThreads"]
-        LoadFlowChoiceThreads(jChoiceThreadsObj as! Dictionary<String, Any?>, story)
+        try LoadFlowChoiceThreads(jChoiceThreadsObj as! Dictionary<String, Any?>, story)
     }
     
-    // TODO: WriteJson()
+    public func WriteJson() -> [String: Any?] {
+        var output: [String: Any?] = [
+            "callstack": callStack?.WriteJson(),
+            "outputStream": WriteListRuntimeObjs(outputStream),
+        ]
+        
+        // choiceThreads: optional
+        // Has to come BEFORE the choices themselves are written out
+        // since the originalThreadIndex of each choice needs to be set
+        var hasChoiceThreads = false
+        var choiceThreads: [String: Any?] = [:]
+        for c in currentChoices {
+            c.originalThreadIndex = c.threadAtGeneration?.threadIndex
+            
+            if callStack?.ThreadWithIndex(c.originalThreadIndex!) == nil {
+                choiceThreads[String(c.originalThreadIndex!)] = c.threadAtGeneration?.WriteJson()
+            }
+            
+        }
+        
+        output["currentChoices"] = currentChoices.map { $0.WriteJson() }
+        
+        return output
+    }
     
     // Used both to load old format and current
     public func LoadFlowChoiceThreads(_ jChoiceThreads: [String: Any?], _ story: Story) throws {
