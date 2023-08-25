@@ -31,32 +31,31 @@ extension BaseValue {
 }
 
 public func CreateValue(_ val: Any?) -> Object? {
+    let val = val!
     print("CREATE A VALUE FROM '\(val)'")
-    if val is Bool {
-        print("this is a bool")
-        return BoolValue(val as! Bool)
-    }
-    else if val is Int {
+    switch val {
+    case is Int:
         print("this is an int")
         return IntValue(val as! Int)
-    }
-    else if val is Float || val is Double {
+    case is Bool:
+        print("this is a bool")
+        return BoolValue(val as! Bool)
+    case is Float:
+        fallthrough
+    case is Double:
         print("this is a float")
         return FloatValue(Float(val as! Double))
-    }
-    else if val is String {
+    case is String:
         print("this is a string")
         return StringValue(val as! String)
-    }
-    else if val is Path {
+    case is Path:
         print("this is a path")
         return DivertTargetValue((val as! Path))
-    }
-    else if val is InkList {
+    case is InkList:
         print("this is a list")
         return ListValue(val as! InkList)
+    default:
+        print("couldn't figure this one out :(")
+        return nil
     }
-    
-    print("couldn't figure this one out :(")
-    return nil
 }
