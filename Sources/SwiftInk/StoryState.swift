@@ -25,27 +25,27 @@ public class StoryState {
     /// Callback for when a state is loaded
     public var onDidLoadState: (() -> Void)?
     
-    // TODO: COMPLETE FUNCTION BODY
+    // TODO: Reimplement for SwiftyJSON
     /// Exports the current state to JSON format, in order to save the game,
     /// and returns it as a string.
     /// - Returns: The save state in JSON format.
     public func ToJson() -> String {
-        return ""
+        fatalError("Reimplement for SwiftyJSON")
     }
     
-    // TODO: COMPLETE FUNCTION BODY
+    // TODO: Reimplement for SwiftyJSON
     /// Exports the current state to JSON format, in order to save the game, and
     /// writes it to the provided stream.
     /// - Parameter stream: The stream to write the JSON string to.
     public func ToJson(_ stream: Stream) {
-        
+        fatalError("Reimplement for SwiftyJSON")
     }
     
-    // TODO: COMPLETE FUNCTION BODY
+    // TODO: Reimplement for SwiftyJSON
     /// Loads a previously saved state in JSON format.
     /// - Parameter json: The JSON string to load.
     public func LoadJson(_ json: String) {
-        
+        fatalError("Reimplement for SwiftyJSON")
     }
     
     /// Gets the visit/read count of a particular `Container` at the given path.
@@ -532,12 +532,12 @@ public class StoryState {
         }
     }
     
-    // TODO: COMPLETE FUNCTION BODY
+    // TODO: Reimplement for SwiftyJSON
     func WriteJson() {
         
     }
     
-    // TODO: COMPLETE FUNCTION BODY
+    // TODO: Reimplement for SwiftyJSON
     func LoadJsonObj() {
         
     }
@@ -909,6 +909,7 @@ public class StoryState {
         }
         
         // MARK: Maybe issue here due to object vs struct tomfoolery in Swift, when dealing with lists?
+        print("Push \(obj) to evaluation stack")
         evaluationStack.append(obj)
     }
     

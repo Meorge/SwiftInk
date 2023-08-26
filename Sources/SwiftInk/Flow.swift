@@ -1,4 +1,5 @@
 import Foundation
+import SwiftyJSON
 
 public class Flow {
     public var name: String?
@@ -13,52 +14,56 @@ public class Flow {
         self.currentChoices = []
     }
     
-    public init(_ name: String, _ story: Story, _ jObject: [String: Any?]) throws {
+    public init(_ name: String, _ story: Story, _ jObject: [String: JSON]) throws {
         self.name = name
         self.callStack = CallStack(story)
-        try self.callStack!.SetJsonToken(jObject["callstack"] as! [String : Any?], story)
-        self.outputStream = try JArrayToRuntimeObjList(jObject["outputStream"] as! [Any?])
-        self.currentChoices = try JArrayToRuntimeObjList(jObject["currentChoices"] as! [Any?]).map { $0 as! Choice }
+        
+        // TODO: Reimplement for SwiftyJSON
+        try self.callStack!.SetJsonToken(jObject["callstack"]!.dictionaryValue, story)
+        self.outputStream = try JArrayToRuntimeObjList(jsonArray: jObject["outputStream"]!.arrayValue)
+        self.currentChoices = try JArrayToRuntimeObjList(jsonArray: jObject["currentChoices"]!.arrayValue).map { $0 as! Choice }
         
         // choiceThreads is optional
-        var jChoiceThreadsObj = jObject["choiceThreads"]
-        try LoadFlowChoiceThreads(jChoiceThreadsObj as! Dictionary<String, Any?>, story)
+        var jChoiceThreadsObj = jObject["choiceThreads"]!.dictionary!
+        try LoadFlowChoiceThreads(jChoiceThreadsObj, story)
     }
     
+    // TODO: Reimplement for SwiftyJSON
     public func WriteJson() -> [String: Any?] {
-        var output: [String: Any?] = [
-            "callstack": callStack?.WriteJson(),
-            "outputStream": WriteListRuntimeObjs(outputStream),
-        ]
-        
-        // choiceThreads: optional
-        // Has to come BEFORE the choices themselves are written out
-        // since the originalThreadIndex of each choice needs to be set
-        var hasChoiceThreads = false
-        var choiceThreads: [String: Any?] = [:]
-        for c in currentChoices {
-            c.originalThreadIndex = c.threadAtGeneration?.threadIndex
-            
-            if callStack?.ThreadWithIndex(c.originalThreadIndex!) == nil {
-                choiceThreads[String(c.originalThreadIndex!)] = c.threadAtGeneration?.WriteJson()
-            }
-            
-        }
-        
-        output["currentChoices"] = currentChoices.map { $0.WriteJson() }
-        
-        return output
+        fatalError("Reimplement for SwiftyJSON")
+//        var output: [String: Any?] = [
+//            "callstack": callStack?.WriteJson(),
+//            "outputStream": WriteListRuntimeObjs(outputStream),
+//        ]
+//
+//        // choiceThreads: optional
+//        // Has to come BEFORE the choices themselves are written out
+//        // since the originalThreadIndex of each choice needs to be set
+//        var hasChoiceThreads = false
+//        var choiceThreads: [String: Any?] = [:]
+//        for c in currentChoices {
+//            c.originalThreadIndex = c.threadAtGeneration?.threadIndex
+//
+//            if callStack?.ThreadWithIndex(c.originalThreadIndex!) == nil {
+//                choiceThreads[String(c.originalThreadIndex!)] = c.threadAtGeneration?.WriteJson()
+//            }
+//
+//        }
+//
+//        output["currentChoices"] = currentChoices.map { $0.WriteJson() }
+//
+//        return output
     }
     
     // Used both to load old format and current
-    public func LoadFlowChoiceThreads(_ jChoiceThreads: [String: Any?], _ story: Story) throws {
+    public func LoadFlowChoiceThreads(_ jChoiceThreads: [String: JSON], _ story: Story) throws {
         for choice in currentChoices {
             let foundActiveThread = callStack?.ThreadWithIndex(choice.originalThreadIndex!)
             if foundActiveThread != nil {
                 choice.threadAtGeneration = foundActiveThread!.Copy()
             }
             else {
-                let jSavedChoiceThread = jChoiceThreads[String(describing: choice.originalThreadIndex!)] as! Dictionary<String, Any?>
+                let jSavedChoiceThread = jChoiceThreads[String(describing: choice.originalThreadIndex!)]!.dictionaryValue
                 choice.threadAtGeneration = try CallStack.Thread(jSavedChoiceThread, story)
             }
         }

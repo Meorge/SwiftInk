@@ -1,4 +1,5 @@
 import Foundation
+import SwiftyJSON
 
 public class CallStack {
     public class Element {
@@ -40,24 +41,25 @@ public class CallStack {
             callstack = []
         }
         
-        public convenience init(_ jThreadObj: [String: Any?], _ storyContext: Story) throws {
+        // TODO: Reimplement for SwiftyJSON
+        public convenience init(_ jThreadObj: [String: JSON], _ storyContext: Story) throws {
             self.init()
             
-            var jThreadCallstack = jThreadObj["callstack"] as! Array<Any?>
+            var jThreadCallstack = jThreadObj["callstack"]!.arrayValue
             for jElTok in jThreadCallstack {
-                var jElementObj = jElTok as! Dictionary<String, Any?>
-                var pushPopType = PushPopType(rawValue: jElementObj["type"] as! Int)
+                var jElementObj = jElTok.dictionaryValue
+                var pushPopType = PushPopType(rawValue: jElementObj["type"]!.intValue)
                 
                 var pointer = Pointer.Null
                 
                 var currentContainerPathStr: String? = nil
                 var currentContainerPathStrToken: Any?
-                if let currentContainerPathStrToken = jElementObj["cPath"] {
+                if let currentContainerPathStrToken = jElementObj["cPath"]?.object {
                     currentContainerPathStr = String(describing: currentContainerPathStrToken)
                     
                     var threadPointerResult = storyContext.ContentAtPath(Path(currentContainerPathStr))
                     pointer.container = threadPointerResult!.container
-                    pointer.index = jElementObj["idx"] as! Int
+                    pointer.index = jElementObj["idx"]!.intValue
                     
                     if threadPointerResult!.obj == nil {
                         throw StoryError.exactInternalStoryLocationNotFound(pathStr: currentContainerPathStr ?? "nil")
@@ -67,13 +69,12 @@ public class CallStack {
                     }
                 }
                 
-                var inExpressionEvaluation = jElementObj["exp"] as! Bool
+                var inExpressionEvaluation = jElementObj["exp"]!.boolValue
                 
                 var el = Element(pushPopType!, pointer, inExpressionEvaluation)
                 
-                if let temps = jElementObj["temp"] {
-                    // TODO: Handle the JSON stuff in here!!
-                    el.temporaryVariables = try JObjectToDictionaryRuntimeObjs(temps as! [String : Any?])
+                if let temps = jElementObj["temp"]?.dictionary {
+                    el.temporaryVariables = try JObjectToDictionaryRuntimeObjs(jsonObject: temps)
                 }
                 else {
                     el.temporaryVariables = [:]
@@ -98,36 +99,38 @@ public class CallStack {
             return copy
         }
         
+        // TODO: Reimplement for SwiftyJSON
         public func WriteJson() -> [String: Any?] {
-            var ba: [String: Any?] = [
-                "callstack": callstack.map { el in
-                    var obj: [String: Any?] = [:]
-                    if !el.currentPointer.isNull {
-                        obj["cPath"] = el.currentPointer.container!.path.componentsString
-                        obj["idx"] = el.currentPointer.index
-                    }
-                    
-                    obj["exp"] = el.inExpressionEvaluation
-                    obj["type"] = el.type.rawValue
-                    
-                    if !el.temporaryVariables.isEmpty {
-                        var tempVars: [String: Any?] = [:]
-                        for kvPair in el.temporaryVariables {
-                            tempVars[kvPair.key] = (kvPair.value as! (any BaseValue)).valueObject
-                        }
-                        obj["temp"] = tempVars
-                    }
-                    
-                    return obj
-                },
-                
-                "threadIndex": threadIndex
-                ]
-            if !previousPointer.isNull {
-                ba["previousContentObject"] = previousPointer.Resolve()!.path.description
-            }
-            
-            return ba
+            fatalError("Reimplement for SwiftyJSON")
+//            var ba: [String: Any?] = [
+//                "callstack": callstack.map { el in
+//                    var obj: [String: Any?] = [:]
+//                    if !el.currentPointer.isNull {
+//                        obj["cPath"] = el.currentPointer.container!.path.componentsString
+//                        obj["idx"] = el.currentPointer.index
+//                    }
+//
+//                    obj["exp"] = el.inExpressionEvaluation
+//                    obj["type"] = el.type.rawValue
+//
+//                    if !el.temporaryVariables.isEmpty {
+//                        var tempVars: [String: Any?] = [:]
+//                        for kvPair in el.temporaryVariables {
+//                            tempVars[kvPair.key] = (kvPair.value as! (any BaseValue)).valueObject
+//                        }
+//                        obj["temp"] = tempVars
+//                    }
+//
+//                    return obj
+//                },
+//
+//                "threadIndex": threadIndex
+//                ]
+//            if !previousPointer.isNull {
+//                ba["previousContentObject"] = previousPointer.Resolve()!.path.description
+//            }
+//
+//            return ba
         }
     }
     
@@ -187,26 +190,30 @@ public class CallStack {
         _threads[0].callstack.append(Element(.Tunnel, _startOfRoot))
     }
     
-    public func SetJsonToken(_ jObject: [String: Any?], _ storyContext: Story) throws {
+    // TODO: Reimplement for SwiftyJSON
+    public func SetJsonToken(_ jObject: [String: JSON], _ storyContext: Story) throws {
+        fatalError("Reimplement for SwiftyJSON")
         _threads = []
-        
-        var jThreads = jObject["threads"] as! [Any?]
-        
+
+        var jThreads = jObject["threads"]!.arrayValue
+
         for jThreadTok in jThreads {
-            var jThreadObj = jThreadTok as! [String: Any?]
+            var jThreadObj = jThreadTok.dictionaryValue
             var thread = try Thread(jThreadObj, storyContext)
             _threads.append(thread)
         }
-        
+
         _threadCounter = jObject["threadCounter"] as! Int
         _startOfRoot = Pointer.StartOf(storyContext.rootContentContainer)
     }
     
+    // TODO: Reimplement for SwiftyJSON
     public func WriteJson() -> [String: Any?] {
-        return [
-            "threads": _threads.map({ $0.WriteJson() }),
-            "threadCounter": _threadCounter
-        ]
+        fatalError("Reimplement for SwiftyJSON")
+//        return [
+//            "threads": _threads.map({ $0.WriteJson() }),
+//            "threadCounter": _threadCounter
+//        ]
     }
     
     public func PushThread() {

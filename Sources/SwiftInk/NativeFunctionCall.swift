@@ -77,6 +77,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
     private var _numberOfParameters: Int = 0
     
     public func Call(_ parameters: [Object]) throws -> Object? {
+        print("Call with params \(parameters)")
         if _prototype != nil {
             return try _prototype!.Call(parameters)
         }
@@ -134,6 +135,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
             if paramCount == 2 {
                 let param2 = parametersOfSingleType[1]
                 
+                print("Performing operation on parameters \(param1) \(param2)")
                 var opForType = opForTypeObj as! BinaryOp<T>
                 
                 // Return value unknown until it's evaluated

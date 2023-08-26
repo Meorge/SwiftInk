@@ -128,17 +128,19 @@ public class VariablesState: Sequence {
         patch = nil
     }
     
+    // TODO: Reimplement for SwiftyJSON
     public func SetJsonToken(_ jToken: [String: Any?]) throws {
-        _globalVariables.removeAll()
-        
-        for varVal in _defaultGlobalVariables {
-            if let loadedToken = jToken[varVal.key] {
-                _globalVariables[varVal.key] = try JTokenToRuntimeObject(loadedToken)
-            }
-            else {
-                _globalVariables[varVal.key] = varVal.value
-            }
-        }
+        fatalError("Reimplement for SwiftyJSON")
+//        _globalVariables.removeAll()
+//
+//        for varVal in _defaultGlobalVariables {
+//            if let loadedToken = jToken[varVal.key] {
+//                _globalVariables[varVal.key] = try JTokenToRuntimeObject(loadedToken)
+//            }
+//            else {
+//                _globalVariables[varVal.key] = varVal.value
+//            }
+//        }
     }
     
     /// When saving out JSON state, we can skip saving global values that

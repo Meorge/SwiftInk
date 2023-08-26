@@ -178,32 +178,34 @@ public class Story: Object {
             _listDefinitions = JTokenToListDefinitions(listDefsObj)
         }
         
-        _mainContentContainer = try JTokenToRuntimeObject(rootToken) as! Container
+        _mainContentContainer = try JTokenToRuntimeObject(jsonToken: rootToken) as! Container
         
         try ResetState()
     }
     
+    // TODO: Reimplement for SwiftyJSON
     func ToJson() -> [String: Any?] {
-        var output: [String: Any?] = [:]
-        output["inkVersion"] = inkVersionCurrent
-        output["root"] = WriteRuntimeContainer(_mainContentContainer!)
-        
-        // List definitions
-        if _listDefinitions != nil {
-            var listDefs: [String: Any?] = [:]
-            
-            for def in _listDefinitions!.lists {
-                var defJson: [String: Any?] = [:]
-                for itemToVal in def.items {
-                    var item = itemToVal.key
-                    var val = itemToVal.value
-                    defJson[item.itemName!] = val
-                }
-                listDefs[def.name] = defJson
-            }
-        }
-        
-        return output
+        fatalError("Reimplement for SwiftyJSON")
+//        var output: [String: Any?] = [:]
+//        output["inkVersion"] = inkVersionCurrent
+//        output["root"] = WriteRuntimeContainer(_mainContentContainer!)
+//
+//        // List definitions
+//        if _listDefinitions != nil {
+//            var listDefs: [String: Any?] = [:]
+//
+//            for def in _listDefinitions!.lists {
+//                var defJson: [String: Any?] = [:]
+//                for itemToVal in def.items {
+//                    var item = itemToVal.key
+//                    var val = itemToVal.value
+//                    defJson[item.itemName!] = val
+//                }
+//                listDefs[def.name] = defJson
+//            }
+//        }
+//
+//        return output
     }
     
     /// Reset the story back to its initial state as it was when it was first constructed.

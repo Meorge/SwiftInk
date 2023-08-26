@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftyJSON
 
 let _controlCommandNames: [Int: String] = [
     ControlCommand.CommandType.evalStart.rawValue: "ev",
@@ -273,31 +274,36 @@ func JTokenToListDefinitions(_ obj: Any?) -> ListDefinitionsOrigin {
     return ListDefinitionsOrigin(allDefs)
 }
 
-func JTokenToRuntimeObject(_ token: Any?) throws -> Object? {
-    if token is Int || token is Float || token is Double || token is Bool {
-        print("Token is \(token) (\(type(of: token))) so using CreateValue")
-        return CreateValue(token) as! Object
+func JTokenToRuntimeObject(jsonToken: JSON) throws -> Object? {
+    if let intValue = jsonToken.int {
+        return CreateValue(intValue)!
+    }
+    else if let floatValue = jsonToken.float {
+        return CreateValue(floatValue)!
+    }
+    else if let boolValue = jsonToken.bool {
+        return CreateValue(boolValue)!
     }
     
-    if var str = token as? String {
-        var firstChar = str.first
+    if var strValue = jsonToken.string {
+        var firstChar = strValue.first
         if firstChar == Character("^") {
-            str.remove(at: str.startIndex)
-            return StringValue(str)
+            strValue.remove(at: strValue.startIndex)
+            return StringValue(strValue)
         }
-        else if firstChar == Character("\n") && str.count == 1 {
+        else if firstChar == Character("\n") && strValue.count == 1 {
             return StringValue("\n")
         }
         
         // Glue
-        if str == "<>" {
+        if strValue == "<>" {
             return Glue()
         }
         
         // Control commands (would looking up in a hash set be faster?)
         for i in 0 ..< _controlCommandNames.count {
             var cmdName = _controlCommandNames[i]
-            if str == cmdName {
+            if strValue == cmdName {
                 return ControlCommand(ControlCommand.CommandType(rawValue: i)!)
             }
         }
@@ -306,68 +312,68 @@ func JTokenToRuntimeObject(_ token: Any?) throws -> Object? {
         // "^" conflictswith the way to identify strings, so now
         // we know it's not a string, we can convert back to the proper
         // symbol for the operator.
-        if str == "L^" {
-            str = "^"
+        if strValue == "L^" {
+            strValue = "^"
         }
         
-        if NativeFunctionCall.CallExistsWithName(str) {
-            return NativeFunctionCall.CallWithName(str)
+        if NativeFunctionCall.CallExistsWithName(strValue) {
+            return NativeFunctionCall.CallWithName(strValue)
         }
         
         // Pop
-        if str == "->->" {
+        if strValue == "->->" {
             return ControlCommand(.popTunnel)
         }
-        else if str == "~ret" {
+        else if strValue == "~ret" {
             return ControlCommand(.popFunction)
         }
         
         // Void
-        if str == "void" {
+        if strValue == "void" {
             return Void()
         }
     }
     
-    if let obj = token as? Dictionary<String, Any?> {
+    if let dictValue = jsonToken.dictionary {
         var propValue: Any? = nil
+        
         // Divert target value to path
-        if var p = obj["^->"] {
+        if var p = dictValue["^->"]?.string {
             propValue = p
-            return DivertTargetValue(Path(propValue as! String))
+            return DivertTargetValue(Path(p))
         }
         
         // VariablePointerValue
-        if var p = obj["^var"] {
-            propValue = p
-            var varPtr = VariablePointerValue(propValue as! String)
-            if var propValue = obj["ci"] {
-                varPtr.contextIndex = propValue as! Int
+        if var p = dictValue["^var"]?.string {
+            var varPtr = VariablePointerValue(p)
+            if var contextIndex = dictValue["ci"]?.int {
+                varPtr.contextIndex = contextIndex
             }
             return varPtr
         }
         
-        // Divert
         var isDivert = false
         var pushesToStack = false
         var divPushType = PushPopType.Function
         var external = false
-        if var p = obj["->"] {
+        if var p = dictValue["->"]?.object {
             propValue = p
             isDivert = true
         }
-        else if var p = obj["f()"] {
+        else if var p = dictValue["f()"]?.object {
             propValue = p
             isDivert = true
             pushesToStack = true
             divPushType = .Function
         }
-        else if var p = obj["->t->"] {
+        
+        else if var p = dictValue["->t->"]?.object {
             propValue = p
             isDivert = true
             pushesToStack = true
             divPushType = .Tunnel
         }
-        else if var p = obj["x()"] {
+        else if var p = dictValue["x()"]?.object {
             propValue = p
             isDivert = true
             external = true
@@ -383,7 +389,7 @@ func JTokenToRuntimeObject(_ token: Any?) throws -> Object? {
             
             var target = String(describing: propValue)
             
-            if let p = obj["var"] {
+            if let p = dictValue["var"]?.object {
                 propValue = p
                 divert.variableDivertName = target
             }
@@ -391,7 +397,7 @@ func JTokenToRuntimeObject(_ token: Any?) throws -> Object? {
                 divert.targetPathString = target
             }
             
-            if let p = obj["c"] {
+            if let p = dictValue["c"]?.object {
                 propValue = p
                 divert.isConditional = true
             }
@@ -400,121 +406,115 @@ func JTokenToRuntimeObject(_ token: Any?) throws -> Object? {
             }
             
             if external {
-                if let p = obj["exArgs"] {
-                    divert.externalArgs = p as! Int
+                if let p = dictValue["exArgs"]?.int {
+                    divert.externalArgs = p
                 }
             }
             
             return divert
         }
         
-        if let p = obj["*"] {
+        if let p = dictValue["*"]?.string {
             propValue = p
             var choice = ChoicePoint()
-            choice.pathStringOnChoice = String(describing: propValue)
+            choice.pathStringOnChoice = p
             
-            if let p = obj["flg"] {
-                propValue = p
-                choice.flags = propValue as! Int
+            if let flags = dictValue["flg"]?.int {
+                choice.flags = flags
             }
             
             return choice
         }
         
         // Variable reference
-        if let p = obj["VAR?"] {
-            return VariableReference(String(describing: p))
+        if let varRef = dictValue["VAR?"]?.object {
+            return VariableReference(String(describing: varRef))
         }
-        else if let p = obj["CNT?"] {
+        else if let pathStringForCount = dictValue["CNT?"]?.string {
             var readCountVarRef = VariableReference()
-            readCountVarRef.pathStringForCount = String(describing: p)
+            readCountVarRef.pathStringForCount = String(describing: pathStringForCount)
             return readCountVarRef
         }
         
         // Variable assignment
         var isVarAss = false
         var isGlobalVar = false
-        if let p = obj["VAR="] {
-            propValue = p
+        if let globalVarVal = dictValue["VAR="]?.object {
+            propValue = globalVarVal
             isVarAss = true
             isGlobalVar = true
         }
-        else if let p = obj["temp="] {
-            propValue = p
+        else if let tempVarVal = dictValue["temp="]?.object {
+            propValue = tempVarVal
             isVarAss = true
             isGlobalVar = false
         }
         
         if isVarAss {
             var varName = String(describing: propValue)
-            var isNewDecl = !obj.keys.contains("re")
+            var isNewDecl = !dictValue.keys.contains("re")
             var varAss = VariableAssignment(varName, isNewDecl)
             varAss.isGlobal = isGlobalVar
             return varAss
         }
         
         // Legacy tag with text
-        if let p = obj["#"] {
-            propValue = p
-            return Tag(text: propValue as! String)
+        if let tagText = dictValue["#"]?.string {
+            return Tag(text: tagText)
         }
         
         // List value
-        if let p = obj["list"] {
-            propValue = p
-            var listContent = propValue as! Dictionary<String, Any?>
+        if let listContent = dictValue["list"]?.dictionary {
             var rawList = InkList()
-            if let p = obj["origins"] {
-                propValue = p
-                var namesAsObj = propValue as! [Any?]
-                rawList.SetInitialOriginNames(namesAsObj.map { $0 as! String })
+            if let origins = dictValue["origins"]?.array {
+                rawList.SetInitialOriginNames(origins.map { $0.stringValue })
             }
             for nameToVal in listContent {
                 var item = InkListItem(nameToVal.key)
-                var val = nameToVal.value as! Int
+                var val = nameToVal.value.int
                 rawList.internalDict[item] = val
             }
             return ListValue(rawList)
         }
         
         // Used when serializing save state only
-        if obj["originalChoicePath"] != nil {
-            return JObjectToChoice(obj)
+        if dictValue["originalChoicePath"] != nil {
+            return JObjectToChoice(jsonObject: dictValue)
         }
     }
     
-    // Array is always a Container
-    if let containerArray = token as? [Any?] {
-        return try JArrayToContainer(containerArray)
+    // Array is always a container
+    if let containerArray = jsonToken.array {
+        return try JArrayToContainer(jsonArray: containerArray)
     }
     
-    if token == nil {
+    if jsonToken == JSON.null {
         return nil
     }
     
-    fatalError("Failed to convert token to runtime object: \(token)")
+    fatalError("Failed to convert token to runtime object: \(jsonToken)")
 }
 
-func JArrayToContainer(_ jArray: [Any?]) throws -> Container {
+func JArrayToContainer(jsonArray: [JSON]) throws -> Container {
     var container = Container()
-    try container.SetContent(JArrayToRuntimeObjList(jArray, skipLast: true))
+    try container.SetContent(JArrayToRuntimeObjList(jsonArray: jsonArray, skipLast: true))
     
     // Final object in the array is always a combination of
     // - named content
     // - a "#f" key with the countFlags
     // (if either exists at all, otherwise null)
-    if var terminatingObj = jArray.last as? Dictionary<String, Any?> {
+    if let terminatingObj = jsonArray.last?.dictionary {
         var namedOnlyContent: [String: Object] = [:]
         for keyVal in terminatingObj {
             if keyVal.key == "#f" {
-                container.countFlags = keyVal.value as! Int
+                container.countFlags = keyVal.value.intValue
             }
             else if keyVal.key == "#n" {
-                container.name = keyVal.value as! String
+                container.name = keyVal.value.stringValue
             }
             else {
-                var namedContentItem = try JTokenToRuntimeObject(keyVal.value)
-                if var namedSubContainer = namedContentItem as? Container {
+                var namedContentItem = try JTokenToRuntimeObject(jsonToken: keyVal.value)
+                if let namedSubContainer = namedContentItem as? Container {
                     namedSubContainer.name = keyVal.key
                 }
                 namedOnlyContent[keyVal.key] = namedContentItem
@@ -527,44 +527,36 @@ func JArrayToContainer(_ jArray: [Any?]) throws -> Container {
     return container
 }
 
-func JArrayToRuntimeObjList(_ jArray: [Any?], skipLast: Bool = false) throws -> [Object] {
-    var count = jArray.count
+func JArrayToRuntimeObjList(jsonArray: [JSON], skipLast: Bool = false) throws -> [Object] {
+    var count = jsonArray.count
     if skipLast {
         count -= 1
     }
     
     var list: [Object] = []
     for i in 0 ..< count {
-        var jTok = jArray[i]
-        var runtimeObj = try JTokenToRuntimeObject(jTok)!
+        var jTok = jsonArray[i]
+        var runtimeObj = try JTokenToRuntimeObject(jsonToken: jTok)!
         list.append(runtimeObj)
     }
     
     return list
 }
 
-func JObjectToChoice(_ jObj: [String: Any?]) -> Choice {
+func JObjectToChoice(jsonObject: [String: JSON]) -> Choice {
     var choice = Choice()
-    choice.text = jObj["text"]! as? String
-    choice.index = jObj["index"] as? Int
-    choice.sourcePath = jObj["originalChoicePath"] as? String
-    choice.originalThreadIndex = jObj["originalThreadIndex"] as? Int
-    choice.pathStringOnChoice = jObj["targetPath"] as! String
+    choice.text = jsonObject["text"]?.string
+    choice.index = jsonObject["index"]?.int
+    choice.sourcePath = jsonObject["originalChoicePath"]?.string
+    choice.originalThreadIndex = jsonObject["originalThreadIndex"]?.int
+    choice.pathStringOnChoice = jsonObject["targetPath"]!.string!
     return choice
 }
 
-func JObjectToDictionaryRuntimeObjs(_ jObject: [String: Any?]) throws -> [String: Object?] {
+func JObjectToDictionaryRuntimeObjs(jsonObject: [String: JSON]) throws -> [String: Object?] {
     var dict: [String: Object?] = [:]
-    for keyVal in jObject {
-        dict[keyVal.key] = try JTokenToRuntimeObject(keyVal.value)
+    for keyVal in jsonObject {
+        dict[keyVal.key] = try JTokenToRuntimeObject(jsonToken: keyVal.value)
     }
-    
     return dict
-}
-
-func TextToDictionary(_ jsonString: String) throws -> [String: Any?]? {
-    if let data = jsonString.data(using: .utf8) {
-        return try JSONSerialization.jsonObject(with: data) as? [String: Any?]
-    }
-    return nil
 }

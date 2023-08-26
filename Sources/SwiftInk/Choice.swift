@@ -13,14 +13,16 @@ public class Choice : Object {
         }
     }
     
+    // TODO: Reimplement for SwiftyJSON
     public func WriteJson() -> [String: Any?] {
-        [
-            "text": text,
-            "index": index,
-            "originalChoicePath": sourcePath,
-            "originalThreadIndex": originalThreadIndex,
-            "targetPath": pathStringOnChoice
-        ]
+        fatalError("Reimplement for SwiftyJSON")
+//        [
+//            "text": text,
+//            "index": index,
+//            "originalChoicePath": sourcePath,
+//            "originalThreadIndex": originalThreadIndex,
+//            "targetPath": pathStringOnChoice
+//        ]
     }
     
     /// Get the path to the original choice point - where was this choice defined in the story?
