@@ -1,4 +1,5 @@
 import Foundation
+import SwiftyJSON
 
 public class Story: Object {
     
@@ -149,9 +150,11 @@ public class Story: Object {
         self.init(nil)
         
         // TODO: Swift should be able to handle this well!
-        var rootObject: [String: Any?] = try TextToDictionary(jsonString)!
+        var rootObject = JSON(parseJSON: jsonString)
+        print(rootObject)
+        //var rootObject: [String: Any?] = try TextToDictionary(jsonString)!
         
-        guard let formatFromFile = rootObject["inkVersion"] as? Int else {
+        guard let formatFromFile = rootObject["inkVersion"].rawValue as? Int else {
             throw StoryError.inkVersionNotFound
         }
         
@@ -166,11 +169,12 @@ public class Story: Object {
         }
         
         var rootToken = rootObject["root"]
+        
         if rootToken == nil {
             throw StoryError.rootNodeNotFound
         }
         
-        if let listDefsObj = rootObject["listDefs"] {
+        if let listDefsObj = rootObject["listDefs"].dictionaryObject {
             _listDefinitions = JTokenToListDefinitions(listDefsObj)
         }
         
