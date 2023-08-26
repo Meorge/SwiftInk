@@ -140,14 +140,14 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
                 
                 // Return value unknown until it's evaluated
                 var resultVal: Any? = opForType(param1.value as? T, param2.value as? T)
-                return CreateValue(resultVal) as! (any BaseValue)
+                return CreateValue(resultVal) as? (any BaseValue)
             }
             
             // Unary
             else {
                 var opForType = opForTypeObj as! UnaryOp<T>
                 var resultVal: Any? = opForType(param1.value as? T)
-                return CreateValue(resultVal) as! (any BaseValue)
+                return CreateValue(resultVal) as? (any BaseValue)
             }
         }
         

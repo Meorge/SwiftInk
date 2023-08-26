@@ -404,7 +404,7 @@ Neither is this:
 }
 """
         let s = try Story(jsonString)
-        let result = try! s.Continue()
+        let result = try! s.ContinueMaximally()
         print("B006 output: '\(result)'")
         XCTAssert(result == """
 "string" + 1 = string1

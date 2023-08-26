@@ -931,6 +931,9 @@ public class StoryState {
             popped.append(PopEvaluationStack()!)
         }
         
+        // NOTE: Not in original C# but it seems like the order is backwards otherwise??
+        popped.reverse()
+        
         return popped
     }
     
