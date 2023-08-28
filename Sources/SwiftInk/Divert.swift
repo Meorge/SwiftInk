@@ -21,8 +21,9 @@ public class Divert: Object, CustomStringConvertible {
     public var targetPointer: Pointer? {
         get {
             // MARK: Issue may be in here
-            print("Time to get the target pointer! The path is \(_targetPath!)")
+            print("Time to get the target pointer! The path is \"\(_targetPath!)\"")
             if _targetPointer == nil || _targetPointer!.isNull {
+                print("Target pointer is null/nil so we need to determine it")
                 var targetObj = ResolvePath(_targetPath!)?.obj
                 
                 if (_targetPath?.lastComponent?.isIndex ?? false) {
@@ -52,7 +53,7 @@ public class Divert: Object, CustomStringConvertible {
                 targetPath = nil
             }
             else {
-                targetPath = Path(newValue)
+                targetPath = Path(newValue!)
             }
         }
     }

@@ -389,7 +389,7 @@ func JTokenToRuntimeObject(jsonToken: JSON) throws -> Object? {
             divert.stackPushType = divPushType
             divert.isExternal = external
             
-            var target = String(describing: propValue)
+            var target = (propValue as? String) ?? "nil"
             
             if let p = dictValue["var"]?.object {
                 propValue = p

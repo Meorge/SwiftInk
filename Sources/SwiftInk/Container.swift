@@ -226,6 +226,9 @@ public class Container: Object, Nameable {
     }
     
     public func ContentAtPath(_ path: Path, partialPathStart: Int = 0, partialPathLength: Int = -1) -> SearchResult {
+        // TODO: Possible issue is that the path seems to be ^.s which is not relative, but it's using parent...
+        // seems like it should be relative then???
+        print("Searching for content at path \"\(path)\"")
         var partialPathLength = partialPathLength
         if partialPathLength == -1 {
             partialPathLength = path.length
@@ -239,6 +242,8 @@ public class Container: Object, Nameable {
         
         for i in partialPathStart ..< partialPathLength {
             var comp = path.GetComponent(i)
+            
+            print("Component of path at \(i) is \(comp)")
             
             // Path component was wrong type
             if currentContainer == nil {

@@ -2,7 +2,7 @@ import Foundation
 
 public class Path: Equatable, CustomStringConvertible {
     public var description: String {
-        String(describing: componentsString!)
+        componentsString
     }
     
     static var parentId = "^"
@@ -29,7 +29,8 @@ public class Path: Equatable, CustomStringConvertible {
             self.name = nil
         }
         
-        init(_ name: String?) {
+        init(_ name: String) {
+            print("Create a path with the name \"\(name)\"")
             self.name = name
             self.index = -1
         }
@@ -95,11 +96,14 @@ public class Path: Equatable, CustomStringConvertible {
     init(_ components: [Component], _ relative: Bool = false) {
         self.components = []
         self.components.append(contentsOf: components)
+        
+        // TODO: it's being passed an empty array of components here!
+        print("Creating a new path by using the components \(components)")
         isRelative = relative
         
     }
     
-    init(_ componentsString: String?) {
+    init(_ componentsString: String) {
         components = []
         self.componentsString = componentsString
     }
@@ -145,16 +149,20 @@ public class Path: Equatable, CustomStringConvertible {
     
     private var _componentsString: String? = nil
     
-    private(set) var componentsString: String? {
+    private(set) var componentsString: String {
         get {
-            if _componentsString == nil {
+            // TODO: issue is in here? not recognizing that it's not relative?
+            // _componentsString needs to be recomputed?? maybe not????
+            print("components array is \(components), relative = \(isRelative), _componentsString so far = \(_componentsString)")
+            if _componentsString == nil || true {
                 _componentsString = components.map({ c in
-                    String(describing: c)
+                    c.description
                 }).joined(separator: ".")
                 if isRelative {
                     _componentsString = "." + _componentsString!
                 }
             }
+            print("output components string is \"\(_componentsString)\"")
             return _componentsString!
         }
         
