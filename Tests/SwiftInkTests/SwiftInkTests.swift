@@ -423,4 +423,30 @@ Neither is this:
 
 """)
     }
+    
+    func testFogg() throws {
+        let jsonString = try String(contentsOfFile: "./fogg.ink.json")
+        let s = try Story(jsonString)
+        
+        while true {
+            print(try s.Continue())
+            if !s.canContinue {
+                if s.currentChoices.count > 0 {
+                    for (i, choice) in s.currentChoices.enumerated() {
+                        print("\(i): \(choice.text!)")
+                    }
+                    var playerChoice: Int? = nil
+                    while playerChoice == nil {
+                        playerChoice = Int(readLine() ?? "0")
+                    }
+                    
+                    try s.ChooseChoiceIndex(playerChoice!)
+                }
+                else {
+                    print("STORY DONE")
+                    break
+                }
+            }
+        }
+    }
 }
