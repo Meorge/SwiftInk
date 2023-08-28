@@ -1456,7 +1456,6 @@ public class Story: Object {
             // When in temporary evaluation, don't create new variables purely within
             // the temporary context, but attempt to create them globally
             // var prioritiseHigherInCallstack = _temporaryEvaluationContainer != nil
-            
             state.variablesState?.Assign(varAss, assignedVal)
             return true
         }

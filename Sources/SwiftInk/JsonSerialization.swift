@@ -454,7 +454,7 @@ func JTokenToRuntimeObject(jsonToken: JSON) throws -> Object? {
         }
         
         if isVarAss {
-            var varName = String(describing: propValue)
+            var varName = propValue as! String
             var isNewDecl = !dictValue.keys.contains("re")
             var varAss = VariableAssignment(varName, isNewDecl)
             varAss.isGlobal = isGlobalVar
