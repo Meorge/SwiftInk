@@ -20,7 +20,7 @@ final class SwiftInkTests: XCTestCase {
 """
         
         let s = try Story(jsonString)
-        XCTAssert(try! s.Continue() == "Hello, world!\n")
+        XCTAssert(try! s.ContinueMaximally() == "Hello, world!\n")
     }
     
     func testB002() throws {
@@ -41,7 +41,7 @@ final class SwiftInkTests: XCTestCase {
 }
 """
         let s = try Story(jsonString)
-        XCTAssert(try! s.Continue() == "I'm after an nop!\n")
+        XCTAssert(try! s.ContinueMaximally() == "I'm after an nop!\n")
     }
     
     func testB003() throws {
@@ -83,7 +83,7 @@ final class SwiftInkTests: XCTestCase {
 }
 """
         let s = try Story(jsonString)
-        let result = try! s.Continue()
+        let result = try! s.ContinueMaximally()
         print("The Result: '\(result)'")
         XCTAssert(result == "9007199254740992\n")
     }
@@ -228,7 +228,7 @@ final class SwiftInkTests: XCTestCase {
 }
 """
         let s = try Story(jsonString)
-        let result = try! s.Continue()
+        let result = try! s.ContinueMaximally()
         print("B005 output: '\(result)'")
         XCTAssert(result == "9007199254740992\n")
     }

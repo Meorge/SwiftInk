@@ -40,7 +40,7 @@ public func CreateValue(_ val: Any?) -> Object? {
     case is Float:
         fallthrough
     case is Double:
-        return FloatValue(Float(val as! Double))
+        return FloatValue(val as! Float)
     case is String:
         return StringValue(val as! String)
     case is Path:

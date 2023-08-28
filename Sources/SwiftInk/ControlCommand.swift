@@ -1,6 +1,6 @@
 import Foundation
 
-public class ControlCommand: Object {
+public class ControlCommand: Object, CustomStringConvertible {
     public enum CommandType: Int {
         case notSet = -1
         case evalStart
@@ -53,6 +53,6 @@ public class ControlCommand: Object {
     // makes it succinct already. So, no need for those functions! :)
     
     public var description: String {
-        return String(describing: commandType)
+        return "ControlCommand(\(commandType))"
     }
 }

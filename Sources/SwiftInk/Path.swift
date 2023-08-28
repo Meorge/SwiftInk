@@ -2,7 +2,7 @@ import Foundation
 
 public class Path: Equatable, CustomStringConvertible {
     public var description: String {
-        String(describing: componentsString)
+        String(describing: componentsString!)
     }
     
     static var parentId = "^"

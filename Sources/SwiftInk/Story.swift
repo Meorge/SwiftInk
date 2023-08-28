@@ -856,7 +856,7 @@ public class Story: Object {
         var currentContainerAncestor = currentChildOfContainer?.parent as? Container
         
         var allChildrenEnteredAtStart = true
-        while currentContainerAncestor != nil && (_prevContainers.contains(currentContainerAncestor!) || currentContainerAncestor!.countingAtStartOnly) {
+        while currentContainerAncestor != nil && (!_prevContainers.contains(currentContainerAncestor!) || currentContainerAncestor!.countingAtStartOnly) {
             // Check whether this ancestor container is being entered at the start,
             // by checking whether the child object is the first.
             var enteringAtStart = currentContainerAncestor!.content.count > 0 && currentChildOfContainer == currentContainerAncestor!.content[0] && allChildrenEnteredAtStart

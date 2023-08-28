@@ -275,11 +275,15 @@ func JTokenToListDefinitions(_ obj: Any?) -> ListDefinitionsOrigin {
 }
 
 func JTokenToRuntimeObject(jsonToken: JSON) throws -> Object? {
-    if let intValue = jsonToken.int {
-        return CreateValue(intValue)!
-    }
-    else if let floatValue = jsonToken.float {
-        return CreateValue(floatValue)!
+    // Determine if it's an int or a float...
+    if jsonToken.type == .number {
+        
+        if Int(exactly: jsonToken.floatValue) == jsonToken.int! {
+            return CreateValue(jsonToken.int!)
+        }
+        else {
+            return CreateValue(jsonToken.float!)
+        }
     }
     else if let boolValue = jsonToken.bool {
         return CreateValue(boolValue)!
