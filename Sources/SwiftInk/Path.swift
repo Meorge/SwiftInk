@@ -30,7 +30,6 @@ public class Path: Equatable, CustomStringConvertible {
         }
         
         init(_ name: String) {
-            print("Create a path with the name \"\(name)\"")
             self.name = name
             self.index = -1
         }
@@ -61,7 +60,7 @@ public class Path: Equatable, CustomStringConvertible {
     
     public var tail: Path? {
         if components.count >= 2 {
-            let tailComps = Array(components[1 ..< components.count - 1])
+            let tailComps = Array(components[1 ..< components.count])
             return Path(tailComps)
         }
         else {
@@ -97,8 +96,6 @@ public class Path: Equatable, CustomStringConvertible {
         self.components = []
         self.components.append(contentsOf: components)
         
-        // TODO: it's being passed an empty array of components here!
-        print("Creating a new path by using the components \(components)")
         isRelative = relative
         
     }
@@ -151,10 +148,7 @@ public class Path: Equatable, CustomStringConvertible {
     
     private(set) var componentsString: String {
         get {
-            // TODO: issue is in here? not recognizing that it's not relative?
-            // _componentsString needs to be recomputed?? maybe not????
-            print("components array is \(components), relative = \(isRelative), _componentsString so far = \(_componentsString)")
-            if _componentsString == nil || true {
+            if _componentsString == nil {
                 _componentsString = components.map({ c in
                     c.description
                 }).joined(separator: ".")
@@ -162,7 +156,6 @@ public class Path: Equatable, CustomStringConvertible {
                     _componentsString = "." + _componentsString!
                 }
             }
-            print("output components string is \"\(_componentsString)\"")
             return _componentsString!
         }
         

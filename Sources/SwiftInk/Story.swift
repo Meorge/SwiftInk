@@ -149,10 +149,7 @@ public class Story: Object {
     public convenience init(_ jsonString: String) throws {
         self.init(nil)
         
-        // TODO: Swift should be able to handle this well!
         var rootObject = JSON(parseJSON: jsonString)
-        print(rootObject)
-        //var rootObject: [String: Any?] = try TextToDictionary(jsonString)!
         
         guard let formatFromFile = rootObject["inkVersion"].rawValue as? Int else {
             throw StoryError.inkVersionNotFound
@@ -729,7 +726,6 @@ public class Story: Object {
             
             pointer = Pointer.StartOf(containerToEnter!)
             containerToEnter = pointer.Resolve() as? Container
-            print("POINTER SET TO START OF CONTAINER")
         }
         
         state.currentPointer = pointer
@@ -742,13 +738,11 @@ public class Story: Object {
         // Stop flow if we hit a stack pop when we're unable to pop (e.g. return/done statement in knot
         // that was diverted to rather than called as a function)
         var currentContentObj = pointer.Resolve()
-        print("Current content object is '\(currentContentObj!)'")
         var isLogicOrFlowControl = try PerformLogicAndFlowControl(currentContentObj)
         
         
         // Has flow been forced to end by flow control above?
         if state.currentPointer.isNull {
-            print("Flow forced to end by flow control above (state.currentPointer.isNull returned true)")
             return
         }
         
@@ -785,13 +779,11 @@ public class Story: Object {
             
             // Expression evaluation content
             if state.inExpressionEvaluation {
-                print("Add this content to the evaluation stack")
                 state.PushEvaluationStack(currentContentObj!)
             }
             
             // Output stream content (i.e. not expression evaluation)
             else {
-                print("Add this content to the output stream")
                 state.PushToOutputStream(currentContentObj!)
             }
         }
@@ -971,7 +963,6 @@ public class Story: Object {
         
         // Divert
         if let currentDivert = contentObj as? Divert {
-            print("saw a divert")
             if currentDivert.isConditional {
                 var conditionValue = state.PopEvaluationStack()
                 
@@ -1011,7 +1002,6 @@ public class Story: Object {
                 // ISSUE: Getting the following message:
                 // "set diverted pointer to the divert's target pointer, Optional(Ink Pointer ->  -- index 0)"
                 // The path is an empty string!
-                print("set diverted pointer to the divert's target pointer, \(currentDivert.targetPointer)")
                 state.divertedPointer = currentDivert.targetPointer
             }
             
@@ -1029,7 +1019,6 @@ public class Story: Object {
                 }
             }
             
-            print("done with the divert!")
             return true
         }
         
@@ -2054,7 +2043,6 @@ public class Story: Object {
             
             // Diverted location has valid content?
             if !state.currentPointer.isNull {
-                print("Diverted location has valid content so we'll go there...")
                 return
             }
             
@@ -2116,7 +2104,6 @@ public class Story: Object {
                 break
             }
             
-            print("IncrementContentPointer creating Pointer with \(nextAncestor) at index \(indexInAncestor)")
             pointer = Pointer(nextAncestor, indexInAncestor)
             
             // Increment to next content in outer container

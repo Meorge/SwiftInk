@@ -561,7 +561,6 @@ public class StoryState {
         if let text = obj as? StringValue {
             if let listText = TrySplittingHeadTailWhitespace(text) {
                 for textObj in listText {
-                    print("push individual text '\(textObj)'")
                     PushToOutputStreamIndividual(textObj)
                 }
                 OutputStreamDirty()
@@ -909,7 +908,6 @@ public class StoryState {
         }
         
         // MARK: Maybe issue here due to object vs struct tomfoolery in Swift, when dealing with lists?
-        print("Push \(obj) to evaluation stack")
         evaluationStack.append(obj)
     }
     
