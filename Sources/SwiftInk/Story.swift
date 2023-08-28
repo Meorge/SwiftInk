@@ -598,7 +598,7 @@ public class Story: Object {
             return Pointer.Null
         }
         
-        // I think??? the original code seemed to use a constructor that didn't exist????
+        // NOTE: I think??? the original code seemed to use a constructor that didn't exist????
         // so just gonna assume we use default values here
         var p = Pointer(nil, 0)
         
@@ -723,13 +723,15 @@ public class Story: Object {
             try VisitContainer(containerToEnter!, atStart: true)
             
             // No content? the most we can do is step past it
-            if containerToEnter?.content.count == 0 {
+            if containerToEnter!.content.count == 0 {
                 break
             }
             
             pointer = Pointer.StartOf(containerToEnter!)
             containerToEnter = pointer.Resolve() as? Container
+            print("POINTER SET TO START OF CONTAINER")
         }
+        
         state.currentPointer = pointer
         
         _profiler?.Step(state.callStack)
@@ -740,17 +742,13 @@ public class Story: Object {
         // Stop flow if we hit a stack pop when we're unable to pop (e.g. return/done statement in knot
         // that was diverted to rather than called as a function)
         var currentContentObj = pointer.Resolve()
-        print("Current content object is '\(currentContentObj!)', type \(type(of: currentContentObj!))")
-        if currentContentObj is ControlCommand {
-            print("\t\((currentContentObj as! ControlCommand).commandType)")
-        }
-        
-        print("Gonna try to perform logic and flow control...")
+        print("Current content object is '\(currentContentObj!)'")
         var isLogicOrFlowControl = try PerformLogicAndFlowControl(currentContentObj)
-        print("Done performing logic and flow control! isLogicOrFlowControl=\(isLogicOrFlowControl)")
+        
         
         // Has flow been forced to end by flow control above?
         if state.currentPointer.isNull {
+            print("Flow forced to end by flow control above (state.currentPointer.isNull returned true)")
             return
         }
         
@@ -776,7 +774,6 @@ public class Story: Object {
         
         // Content to add to evaluation stack or the output stream
         if shouldAddToStream {
-            print("This content should be added to a stream")
             // If we're pushing a variable pointer onto the evaluation stack, ensure that it's specific
             // to our current (possibly temporary) context index. And make a copy of the pointer
             // so that we're not editing the original runtime object.
@@ -972,11 +969,9 @@ public class Story: Object {
             return false
         }
         
-        
-        
-        
         // Divert
         if let currentDivert = contentObj as? Divert {
+            print("saw a divert")
             if currentDivert.isConditional {
                 var conditionValue = state.PopEvaluationStack()
                 
@@ -1013,6 +1008,10 @@ public class Story: Object {
                 return true
             }
             else {
+                // ISSUE: Getting the following message:
+                // "set diverted pointer to the divert's target pointer, Optional(Ink Pointer ->  -- index 0)"
+                // The path is an empty string!
+                print("set diverted pointer to the divert's target pointer, \(currentDivert.targetPointer)")
                 state.divertedPointer = currentDivert.targetPointer
             }
             
@@ -1030,6 +1029,7 @@ public class Story: Object {
                 }
             }
             
+            print("done with the divert!")
             return true
         }
         
@@ -1045,19 +1045,16 @@ public class Story: Object {
                 state.inExpressionEvaluation = false
                 break
             case .evalOutput:
-                print("EVALUATE OUTPUT! Evaluation stack is \(state.evaluationStack)")
                 // If the expression turned out to be empty, there may not be anything on the stack
                 if !state.evaluationStack.isEmpty {
                     var output = state.PopEvaluationStack()
                     
-                    print("Output from evaluation stack is \(output)")
                     // Functions may evaluate to Void, in which case we skip output
                     if !(output is Void) {
                         // TODO: Should we really always blanket convert to string?
                         // It would be okay to have numbers in the output stream, the
                         // only problem is when exporting text for viewing, it skips over numbers etc.
                         var text = StringValue(String(describing: output!))
-                        print("evalOutput is done! the text we got was '\(text)'")
                         state.PushToOutputStream(text)
                     }
                 }
@@ -2048,7 +2045,7 @@ public class Story: Object {
         state.previousPointer = state.currentPointer
         
         // Divert step?
-        if state.divertedPointer != nil && !(state.divertedPointer!.isNull) {
+        if !(state.divertedPointer?.isNull ?? true) {
             state.currentPointer = state.divertedPointer!
             state.divertedPointer = Pointer.Null
             
@@ -2057,6 +2054,7 @@ public class Story: Object {
             
             // Diverted location has valid content?
             if !state.currentPointer.isNull {
+                print("Diverted location has valid content so we'll go there...")
                 return
             }
             
@@ -2118,6 +2116,7 @@ public class Story: Object {
                 break
             }
             
+            print("IncrementContentPointer creating Pointer with \(nextAncestor) at index \(indexInAncestor)")
             pointer = Pointer(nextAncestor, indexInAncestor)
             
             // Increment to next content in outer container

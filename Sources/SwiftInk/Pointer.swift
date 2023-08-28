@@ -5,6 +5,7 @@ public struct Pointer: CustomStringConvertible {
     public var index: Int
     
     public init(_ container: Container?, _ index: Int) {
+        print("Initialize Pointer with container \(container?.path) and index \(index)")
         self.container = container
         self.index = index
     }

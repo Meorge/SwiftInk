@@ -370,7 +370,6 @@ func JTokenToRuntimeObject(jsonToken: JSON) throws -> Object? {
             pushesToStack = true
             divPushType = .Function
         }
-        
         else if var p = dictValue["->t->"]?.object {
             propValue = p
             isDivert = true
@@ -384,7 +383,6 @@ func JTokenToRuntimeObject(jsonToken: JSON) throws -> Object? {
             pushesToStack = false
             divPushType = .Function
         }
-        
         if isDivert {
             var divert = Divert()
             divert.pushesToStack = pushesToStack
@@ -418,6 +416,7 @@ func JTokenToRuntimeObject(jsonToken: JSON) throws -> Object? {
             return divert
         }
         
+        // Choice
         if let p = dictValue["*"]?.string {
             propValue = p
             var choice = ChoicePoint()
