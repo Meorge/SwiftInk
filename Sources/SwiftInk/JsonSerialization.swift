@@ -370,7 +370,6 @@ func JTokenToRuntimeObject(jsonToken: JSON) throws -> Object? {
             pushesToStack = true
             divPushType = .Function
         }
-        
         else if var p = dictValue["->t->"]?.object {
             propValue = p
             isDivert = true
@@ -384,14 +383,13 @@ func JTokenToRuntimeObject(jsonToken: JSON) throws -> Object? {
             pushesToStack = false
             divPushType = .Function
         }
-        
         if isDivert {
             var divert = Divert()
             divert.pushesToStack = pushesToStack
             divert.stackPushType = divPushType
             divert.isExternal = external
             
-            var target = String(describing: propValue)
+            var target = (propValue as? String) ?? "nil"
             
             if let p = dictValue["var"]?.object {
                 propValue = p
@@ -418,6 +416,7 @@ func JTokenToRuntimeObject(jsonToken: JSON) throws -> Object? {
             return divert
         }
         
+        // Choice
         if let p = dictValue["*"]?.string {
             propValue = p
             var choice = ChoicePoint()
@@ -455,7 +454,7 @@ func JTokenToRuntimeObject(jsonToken: JSON) throws -> Object? {
         }
         
         if isVarAss {
-            var varName = String(describing: propValue)
+            var varName = propValue as! String
             var isNewDecl = !dictValue.keys.contains("re")
             var varAss = VariableAssignment(varName, isNewDecl)
             varAss.isGlobal = isGlobalVar

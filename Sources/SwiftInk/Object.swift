@@ -61,7 +61,7 @@ public class Object: Equatable, Hashable {
                         comps.append(Path.Component(namedChild!.name!))
                     }
                     else {
-                        // NOTE: funky, may be broken
+                        // TODO: funky, may be broken
                         comps.append(Path.Component(container!.content.firstIndex(where: { c in
                             c === child
                         })!))

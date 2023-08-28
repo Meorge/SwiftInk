@@ -20,7 +20,7 @@ public class Divert: Object, CustomStringConvertible {
     
     public var targetPointer: Pointer? {
         get {
-            if _targetPointer!.isNull {
+            if _targetPointer == nil || _targetPointer!.isNull {
                 var targetObj = ResolvePath(_targetPath!)?.obj
                 
                 if (_targetPath?.lastComponent?.isIndex ?? false) {
@@ -50,7 +50,7 @@ public class Divert: Object, CustomStringConvertible {
                 targetPath = nil
             }
             else {
-                targetPath = Path(newValue)
+                targetPath = Path(newValue!)
             }
         }
     }

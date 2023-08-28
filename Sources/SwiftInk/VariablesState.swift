@@ -111,7 +111,6 @@ public class VariablesState: Sequence {
     
     public func ApplyPatch() {
         if patch == nil {
-            print("ApplyPatch() was called, but patch was nil")
             return
         }
         

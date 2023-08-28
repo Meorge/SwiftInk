@@ -57,7 +57,7 @@ public class CallStack {
                 if let currentContainerPathStrToken = jElementObj["cPath"]?.object {
                     currentContainerPathStr = String(describing: currentContainerPathStrToken)
                     
-                    var threadPointerResult = storyContext.ContentAtPath(Path(currentContainerPathStr))
+                    var threadPointerResult = storyContext.ContentAtPath(Path(currentContainerPathStr!))
                     pointer.container = threadPointerResult!.container
                     pointer.index = jElementObj["idx"]!.intValue
                     

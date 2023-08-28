@@ -228,9 +228,12 @@ final class SwiftInkTests: XCTestCase {
 }
 """
         let s = try Story(jsonString)
-        let result = try! s.ContinueMaximally()
+        var result = try! s.ContinueMaximally()
+        XCTAssert(result == "Choose A or B:\n")
+        try! s.ChooseChoiceIndex(0)
+        result = try! s.ContinueMaximally()
         print("B005 output: '\(result)'")
-        XCTAssert(result == "9007199254740992\n")
+        XCTAssert(result == "A\n")
     }
     
     func testB006() throws {

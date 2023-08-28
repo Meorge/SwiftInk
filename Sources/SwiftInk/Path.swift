@@ -2,7 +2,7 @@ import Foundation
 
 public class Path: Equatable, CustomStringConvertible {
     public var description: String {
-        String(describing: componentsString!)
+        componentsString
     }
     
     static var parentId = "^"
@@ -29,7 +29,7 @@ public class Path: Equatable, CustomStringConvertible {
             self.name = nil
         }
         
-        init(_ name: String?) {
+        init(_ name: String) {
             self.name = name
             self.index = -1
         }
@@ -60,7 +60,7 @@ public class Path: Equatable, CustomStringConvertible {
     
     public var tail: Path? {
         if components.count >= 2 {
-            let tailComps = Array(components[1 ..< components.count - 1])
+            let tailComps = Array(components[1 ..< components.count])
             return Path(tailComps)
         }
         else {
@@ -95,11 +95,12 @@ public class Path: Equatable, CustomStringConvertible {
     init(_ components: [Component], _ relative: Bool = false) {
         self.components = []
         self.components.append(contentsOf: components)
+        
         isRelative = relative
         
     }
     
-    init(_ componentsString: String?) {
+    init(_ componentsString: String) {
         components = []
         self.componentsString = componentsString
     }
@@ -145,11 +146,11 @@ public class Path: Equatable, CustomStringConvertible {
     
     private var _componentsString: String? = nil
     
-    private(set) var componentsString: String? {
+    private(set) var componentsString: String {
         get {
             if _componentsString == nil {
                 _componentsString = components.map({ c in
-                    String(describing: c)
+                    c.description
                 }).joined(separator: ".")
                 if isRelative {
                     _componentsString = "." + _componentsString!

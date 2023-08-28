@@ -149,10 +149,7 @@ public class Story: Object {
     public convenience init(_ jsonString: String) throws {
         self.init(nil)
         
-        // TODO: Swift should be able to handle this well!
         var rootObject = JSON(parseJSON: jsonString)
-        print(rootObject)
-        //var rootObject: [String: Any?] = try TextToDictionary(jsonString)!
         
         guard let formatFromFile = rootObject["inkVersion"].rawValue as? Int else {
             throw StoryError.inkVersionNotFound
@@ -598,7 +595,7 @@ public class Story: Object {
             return Pointer.Null
         }
         
-        // I think??? the original code seemed to use a constructor that didn't exist????
+        // NOTE: I think??? the original code seemed to use a constructor that didn't exist????
         // so just gonna assume we use default values here
         var p = Pointer(nil, 0)
         
@@ -723,13 +720,14 @@ public class Story: Object {
             try VisitContainer(containerToEnter!, atStart: true)
             
             // No content? the most we can do is step past it
-            if containerToEnter?.content.count == 0 {
+            if containerToEnter!.content.count == 0 {
                 break
             }
             
             pointer = Pointer.StartOf(containerToEnter!)
             containerToEnter = pointer.Resolve() as? Container
         }
+        
         state.currentPointer = pointer
         
         _profiler?.Step(state.callStack)
@@ -740,14 +738,8 @@ public class Story: Object {
         // Stop flow if we hit a stack pop when we're unable to pop (e.g. return/done statement in knot
         // that was diverted to rather than called as a function)
         var currentContentObj = pointer.Resolve()
-        print("Current content object is '\(currentContentObj!)', type \(type(of: currentContentObj!))")
-        if currentContentObj is ControlCommand {
-            print("\t\((currentContentObj as! ControlCommand).commandType)")
-        }
-        
-        print("Gonna try to perform logic and flow control...")
         var isLogicOrFlowControl = try PerformLogicAndFlowControl(currentContentObj)
-        print("Done performing logic and flow control! isLogicOrFlowControl=\(isLogicOrFlowControl)")
+        
         
         // Has flow been forced to end by flow control above?
         if state.currentPointer.isNull {
@@ -776,7 +768,6 @@ public class Story: Object {
         
         // Content to add to evaluation stack or the output stream
         if shouldAddToStream {
-            print("This content should be added to a stream")
             // If we're pushing a variable pointer onto the evaluation stack, ensure that it's specific
             // to our current (possibly temporary) context index. And make a copy of the pointer
             // so that we're not editing the original runtime object.
@@ -788,13 +779,11 @@ public class Story: Object {
             
             // Expression evaluation content
             if state.inExpressionEvaluation {
-                print("Add this content to the evaluation stack")
                 state.PushEvaluationStack(currentContentObj!)
             }
             
             // Output stream content (i.e. not expression evaluation)
             else {
-                print("Add this content to the output stream")
                 state.PushToOutputStream(currentContentObj!)
             }
         }
@@ -972,9 +961,6 @@ public class Story: Object {
             return false
         }
         
-        
-        
-        
         // Divert
         if let currentDivert = contentObj as? Divert {
             if currentDivert.isConditional {
@@ -1013,6 +999,9 @@ public class Story: Object {
                 return true
             }
             else {
+                // ISSUE: Getting the following message:
+                // "set diverted pointer to the divert's target pointer, Optional(Ink Pointer ->  -- index 0)"
+                // The path is an empty string!
                 state.divertedPointer = currentDivert.targetPointer
             }
             
@@ -1045,19 +1034,16 @@ public class Story: Object {
                 state.inExpressionEvaluation = false
                 break
             case .evalOutput:
-                print("EVALUATE OUTPUT! Evaluation stack is \(state.evaluationStack)")
                 // If the expression turned out to be empty, there may not be anything on the stack
                 if !state.evaluationStack.isEmpty {
                     var output = state.PopEvaluationStack()
                     
-                    print("Output from evaluation stack is \(output)")
                     // Functions may evaluate to Void, in which case we skip output
                     if !(output is Void) {
                         // TODO: Should we really always blanket convert to string?
                         // It would be okay to have numbers in the output stream, the
                         // only problem is when exporting text for viewing, it skips over numbers etc.
                         var text = StringValue(String(describing: output!))
-                        print("evalOutput is done! the text we got was '\(text)'")
                         state.PushToOutputStream(text)
                     }
                 }
@@ -1470,7 +1456,6 @@ public class Story: Object {
             // When in temporary evaluation, don't create new variables purely within
             // the temporary context, but attempt to create them globally
             // var prioritiseHigherInCallstack = _temporaryEvaluationContainer != nil
-            
             state.variablesState?.Assign(varAss, assignedVal)
             return true
         }
@@ -2048,7 +2033,7 @@ public class Story: Object {
         state.previousPointer = state.currentPointer
         
         // Divert step?
-        if state.divertedPointer != nil && !(state.divertedPointer!.isNull) {
+        if !(state.divertedPointer?.isNull ?? true) {
             state.currentPointer = state.divertedPointer!
             state.divertedPointer = Pointer.Null
             
