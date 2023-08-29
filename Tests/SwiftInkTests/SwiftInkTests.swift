@@ -428,7 +428,13 @@ Neither is this:
     }
     
     func testFogg() throws {
-        let jsonString = try String(contentsOfFile: "./fogg.ink.json")
+        print(Bundle.module.bundlePath)
+        guard let fp = Bundle.module.path(forResource: "TestData/fogg", ofType: "json") else {
+            fatalError("ouch")
+        }
+        
+        let url = URL(fileURLWithPath: fp)
+        let jsonString = try String(contentsOf: url)
         let s = try Story(jsonString)
         
         while true {

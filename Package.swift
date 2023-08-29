@@ -24,6 +24,9 @@ let package = Package(
             dependencies: ["SwiftyJSON"]),
         .testTarget(
             name: "SwiftInkTests",
-            dependencies: ["SwiftInk"]),
+            dependencies: ["SwiftInk"],
+            path: "Tests",
+            resources: [
+                .copy("TestData")]),
     ]
 )

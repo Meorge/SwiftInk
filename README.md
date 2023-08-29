@@ -16,7 +16,7 @@ Legend:
 - ❌ - Not started
 
 Ink runtime engine:
-- 📝 `CallStack` (JSON functions need to be implemented)
+- ✅ `CallStack`
 - ✅ `Choice`
 - ✅ `ChoicePoint`
 - ✅ `Container`
@@ -24,11 +24,11 @@ Ink runtime engine:
 - ✅ `DebugMetadata`
 - ✅ `Divert`
 - ✅ `Error`
-- 📝 `Flow` (JSON functions need to be implemented)
+- ✅ `Flow`
 - ✅ `Glue`
 - ✅ `INamedContent` (now `Nameable`)
 - ✅ `InkList`
-- ❌ `JsonSerialisation`
+- ✅ `JsonSerialisation`
 - ✅ `ListDefinition`
 - ✅ `ListDefinitionsOrigin`
 - ✅ `NativeFunctionCall`
@@ -40,15 +40,15 @@ Ink runtime engine:
 - ✅ `SearchResult`
 - ❌ `SimpleJson`
 - ✅ `StatePatch`
-- 📝 `Story` (JSON functions need to be implemented)
+- ✅ `Story`
 - ✅ `StoryException` (now `StoryError`, and with separate errors)
-- 📝 `StoryState` (JSON functions need to be implemented)
+- ✅ `StoryState`
 - ✅ `StringJoinExtension` (uses built-in Swift methods)
 - ✅ `Tag`
 - ✅ `Value` (specific value types now in `ValueTypes` folder)
 - ✅ `VariableAssignment`
 - ✅ `VariableReference`
-- 📝 `VariablesState` (JSON functions need to be implemented)
+- ✅ `VariablesState`
 - ✅ `Void`
 
 
