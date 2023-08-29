@@ -18,7 +18,6 @@ public class Flow {
         self.name = name
         self.callStack = CallStack(story)
         
-        // TODO: Reimplement for SwiftyJSON
         try self.callStack!.SetJsonToken(jObject["callstack"]!.dictionaryValue, story)
         self.outputStream = try JArrayToRuntimeObjList(jsonArray: jObject["outputStream"]!.arrayValue)
         self.currentChoices = try JArrayToRuntimeObjList(jsonArray: jObject["currentChoices"]!.arrayValue).map { $0 as! Choice }

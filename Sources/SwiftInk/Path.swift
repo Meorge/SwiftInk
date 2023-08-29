@@ -102,6 +102,7 @@ public class Path: Equatable, CustomStringConvertible {
     
     init(_ componentsString: String) {
         components = []
+        print("Create a new path from the components string, \"\(componentsString)\"")
         self.componentsString = componentsString
     }
     

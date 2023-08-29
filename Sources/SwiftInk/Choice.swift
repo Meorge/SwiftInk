@@ -1,6 +1,6 @@
 import Foundation
 
-public class Choice : Object {
+public class Choice : Object, CustomStringConvertible {
     /// The main text to present to the player.
     public var text: String?
     
@@ -41,5 +41,9 @@ public class Choice : Object {
     public var tags: [String]?
     
     public override init() {
+    }
+    
+    public var description: String {
+        "Choice(text: \"\(text ?? "nil")\") -> \(pathStringOnChoice)"
     }
 }

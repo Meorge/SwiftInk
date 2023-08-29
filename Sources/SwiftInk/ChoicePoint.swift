@@ -1,6 +1,6 @@
 import Foundation
 
-public class ChoicePoint: Object {
+public class ChoicePoint: Object, CustomStringConvertible {
     public var pathOnChoice: Path? {
         get {
             // Resolve any relative paths to global ones as we come across them
@@ -76,7 +76,7 @@ public class ChoicePoint: Object {
     
     public var description: String {
         var targetLineNum: Int? = DebugLineNumberOfPath(path: pathOnChoice)
-        var targetString = String(describing: pathOnChoice)
+        var targetString = String(describing: pathOnChoice!)
         
         if targetLineNum != nil {
             targetString = " line \(targetLineNum!)(\(targetString))"

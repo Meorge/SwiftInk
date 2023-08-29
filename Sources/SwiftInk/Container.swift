@@ -226,6 +226,7 @@ public class Container: Object, Nameable {
     }
     
     public func ContentAtPath(_ path: Path, partialPathStart: Int = 0, partialPathLength: Int = -1) -> SearchResult {
+        print("Time to look for content at path \(path)")
         var partialPathLength = partialPathLength
         if partialPathLength == -1 {
             partialPathLength = path.length
@@ -278,7 +279,7 @@ public class Container: Object, Nameable {
         sb.append("[")
         
         if hasValidName {
-            sb.append(" (\(String(describing: name)))")
+            sb.append(" (\(name!))")
         }
         
         if self === pointedObj {

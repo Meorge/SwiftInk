@@ -105,7 +105,7 @@ public class Divert: Object, CustomStringConvertible {
     
     public var description: String {
         if hasVariableTarget {
-            return "Divert(variable: \(variableDivertName!)"
+            return "Divert(variable: \(variableDivertName!))"
         }
         
         if targetPath == nil {
