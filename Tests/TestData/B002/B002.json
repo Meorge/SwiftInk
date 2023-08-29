@@ -1,0 +1,14 @@
+{
+  "inkVersion": 19,
+  "root": [
+    [
+      "nop",
+      "^I'm after an nop!",
+      "^\n",
+      null
+    ],
+    "done",
+    null
+  ],
+  "listDefs": {}
+}
