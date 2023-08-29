@@ -24,7 +24,7 @@ public class CallStack {
         }
         
         public func Copy() -> Element {
-            var copy = Element(self.type, currentPointer, self.inExpressionEvaluation)
+            let copy = Element(self.type, currentPointer, self.inExpressionEvaluation)
             copy.temporaryVariables = temporaryVariables
             copy.evaluationStackHeightWhenPushed = evaluationStackHeightWhenPushed
             copy.functionStartInOuputStream = functionStartInOuputStream
@@ -45,19 +45,19 @@ public class CallStack {
         public convenience init(_ jThreadObj: [String: JSON], _ storyContext: Story) throws {
             self.init()
             
-            var jThreadCallstack = jThreadObj["callstack"]!.arrayValue
+            let jThreadCallstack = jThreadObj["callstack"]!.arrayValue
             for jElTok in jThreadCallstack {
-                var jElementObj = jElTok.dictionaryValue
-                var pushPopType = PushPopType(rawValue: jElementObj["type"]!.intValue)
+                let jElementObj = jElTok.dictionaryValue
+                let pushPopType = PushPopType(rawValue: jElementObj["type"]!.intValue)
                 
                 var pointer = Pointer.Null
                 
                 var currentContainerPathStr: String? = nil
-                var currentContainerPathStrToken: Any?
+                var _: Any?
                 if let currentContainerPathStrToken = jElementObj["cPath"]?.object {
                     currentContainerPathStr = String(describing: currentContainerPathStrToken)
                     
-                    var threadPointerResult = storyContext.ContentAtPath(Path(currentContainerPathStr!))
+                    let threadPointerResult = storyContext.ContentAtPath(Path(currentContainerPathStr!))
                     pointer.container = threadPointerResult!.container
                     pointer.index = jElementObj["idx"]!.intValue
                     
@@ -69,9 +69,9 @@ public class CallStack {
                     }
                 }
                 
-                var inExpressionEvaluation = jElementObj["exp"]!.boolValue
+                let inExpressionEvaluation = jElementObj["exp"]!.boolValue
                 
-                var el = Element(pushPopType!, pointer, inExpressionEvaluation)
+                let el = Element(pushPopType!, pointer, inExpressionEvaluation)
                 
                 if let temps = jElementObj["temp"]?.dictionary {
                     el.temporaryVariables = try JObjectToDictionaryRuntimeObjs(jsonObject: temps)
@@ -84,13 +84,13 @@ public class CallStack {
             }
             
             if let prevContentObjPath = jThreadObj["previousContentObject"] {
-                var prevPath = Path(String(describing: prevContentObjPath))
+                let prevPath = Path(String(describing: prevContentObjPath))
                 previousPointer = try storyContext.PointerAtPath(prevPath)
             }
         }
         
         public func Copy() -> Thread {
-            var copy = Thread()
+            let copy = Thread()
             copy.threadIndex = threadIndex
             for e in callstack {
                 copy.callstack.append(e.Copy())
@@ -143,8 +143,8 @@ public class CallStack {
     }
     
     public var currentElement: Element {
-        var thread = _threads[_threads.count - 1]
-        var cs = thread.callstack
+        let thread = _threads[_threads.count - 1]
+        let cs = thread.callstack
         return cs[cs.count - 1]
     }
     
@@ -195,11 +195,11 @@ public class CallStack {
         fatalError("Reimplement for SwiftyJSON")
         _threads = []
 
-        var jThreads = jObject["threads"]!.arrayValue
+        let jThreads = jObject["threads"]!.arrayValue
 
         for jThreadTok in jThreads {
-            var jThreadObj = jThreadTok.dictionaryValue
-            var thread = try Thread(jThreadObj, storyContext)
+            let jThreadObj = jThreadTok.dictionaryValue
+            let thread = try Thread(jThreadObj, storyContext)
             _threads.append(thread)
         }
 
@@ -217,14 +217,14 @@ public class CallStack {
     }
     
     public func PushThread() {
-        var newThread = currentThread.Copy()
+        let newThread = currentThread.Copy()
         _threadCounter += 1
         newThread.threadIndex = _threadCounter
         _threads.append(newThread)
     }
     
     public func ForkThread() -> Thread {
-        var forkedThread = currentThread.Copy()
+        let forkedThread = currentThread.Copy()
         _threadCounter += 1
         forkedThread.threadIndex = _threadCounter
         return forkedThread
@@ -232,7 +232,7 @@ public class CallStack {
     
     public func PopThread() {
         if canPopThread {
-            _threads.popLast()
+            _ = _threads.popLast()
         }
         else {
             fatalError("Can't pop thread")
@@ -249,7 +249,7 @@ public class CallStack {
     
     public func Push(_ type: PushPopType, externalEvaluationStackHeight: Int = 0, outputStreamLengthWithPushed: Int = 0) {
         // When pushing to callstack, maintain the current content path, but jump out of expressions by default
-        var element = Element(type, currentElement.currentPointer, false)
+        let element = Element(type, currentElement.currentPointer, false)
         
         element.evaluationStackHeightWhenPushed = externalEvaluationStackHeight
         element.functionStartInOuputStream = outputStreamLengthWithPushed
@@ -271,7 +271,7 @@ public class CallStack {
     
     public func Pop(_ type: PushPopType? = nil) {
         if CanPop(type) {
-            currentThread.callstack.popLast()
+            _ = currentThread.callstack.popLast()
         }
         else {
             fatalError("Mismatched push/pop in Callstack")
@@ -285,7 +285,7 @@ public class CallStack {
             _contextIndex = currentElementIndex + 1
         }
         
-        var contextElement = callStack[_contextIndex - 1]
+        let contextElement = callStack[_contextIndex - 1]
         
         if let varValue = contextElement.temporaryVariables[name] {
             return varValue
@@ -301,7 +301,7 @@ public class CallStack {
             _contextIndex = currentElementIndex + 1
         }
         
-        var contextElement = callStack[_contextIndex - 1]
+        let contextElement = callStack[_contextIndex - 1]
         
         if !declareNew && !contextElement.temporaryVariables.keys.contains(name) {
             fatalError("Could not find temporary variable to set: \(name)")
@@ -343,8 +343,8 @@ public class CallStack {
         var sb = ""
         
         for t in 0 ..< _threads.count {
-            var thread = _threads[t]
-            var isCurrent = (t == _threads.count - 1)
+            let thread = _threads[t]
+            let isCurrent = (t == _threads.count - 1)
             sb += "=== THREAD \(t+1)/\(_threads.count) \(isCurrent ? "(current)" : "")===\n"
             
             for i in 0 ..< thread.callstack.count {
@@ -355,7 +355,7 @@ public class CallStack {
                     sb += "  [TUNNEL] "
                 }
                 
-                var pointer = thread.callstack[i].currentPointer
+                let pointer = thread.callstack[i].currentPointer
                 if !pointer.isNull {
                     sb += "<SOMEWHERE IN "
                     sb += String(describing: pointer.container!.path)

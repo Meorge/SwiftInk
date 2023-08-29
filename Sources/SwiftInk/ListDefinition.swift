@@ -13,7 +13,7 @@ public class ListDefinition: Equatable {
         if _items.count == 0 {
             _items = [:]
             for itemNameAndValue in _itemNameToValues {
-                var item = InkListItem(name, itemNameAndValue.key)
+                let item = InkListItem(name, itemNameAndValue.key)
                 _items[item] = itemNameAndValue.value
             }
         }

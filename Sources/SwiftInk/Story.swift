@@ -149,7 +149,7 @@ public class Story: Object {
     public convenience init(_ jsonString: String) throws {
         self.init(nil)
         
-        var rootObject = JSON(parseJSON: jsonString)
+        let rootObject = JSON(parseJSON: jsonString)
         
         guard let formatFromFile = rootObject["inkVersion"].rawValue as? Int else {
             throw StoryError.inkVersionNotFound
@@ -165,7 +165,7 @@ public class Story: Object {
             print("Warning: Version of ink used to build story doesn't match current version of engine. Non-critical, but recommend synchronising.")
         }
         
-        var rootToken = rootObject["root"]
+        let rootToken = rootObject["root"]
         
         if rootToken == nil {
             throw StoryError.rootNodeNotFound
@@ -175,7 +175,7 @@ public class Story: Object {
             _listDefinitions = JTokenToListDefinitions(listDefsObj)
         }
         
-        _mainContentContainer = try JTokenToRuntimeObject(jsonToken: rootToken) as! Container
+        _mainContentContainer = try JTokenToRuntimeObject(jsonToken: rootToken) as? Container
         
         try ResetState()
     }
@@ -234,7 +234,7 @@ public class Story: Object {
     
     func ResetGlobals() throws {
         if _mainContentContainer?.namedContent.keys.contains("global decl") ?? false {
-            var originalPointer = state.currentPointer
+            let originalPointer = state.currentPointer
             
             try ChoosePath(Path("global decl"), incrementingTurnIndex: false)
             
@@ -303,7 +303,7 @@ public class Story: Object {
     func ContinueInternal(_ millisecsLimitAsync: Float = 0.0) throws {
         _profiler?.PreContinue()
         
-        var isAsyncTimeLimited = millisecsLimitAsync > 0
+        let isAsyncTimeLimited = millisecsLimitAsync > 0
         
         _recursiveContinueCount += 1
         
@@ -329,7 +329,7 @@ public class Story: Object {
         }
         
         // Start timing
-        var durationStopwatch = Stopwatch()
+        let durationStopwatch = Stopwatch()
         durationStopwatch.Start()
         
         var outputStreamEndsInNewline = false
@@ -458,7 +458,7 @@ public class Story: Object {
         
         // Run out of content and we have a default invisible choice that we can follow?
         if !canContinue && !state.callStack.elementIsEvaluateFromGame {
-            try TryFollowDefaultInvisibleChoice()
+            _ = try TryFollowDefaultInvisibleChoice()
         }
         
         _profiler?.PreSnapshot()
@@ -470,7 +470,7 @@ public class Story: Object {
             if _stateSnapshotAtLastNewline != nil {
                 // Has proper text or a tag been added? Then we know that the newline
                 // that was previously added is definitely the end of the line.
-                var change = CalculateNewlineOutputStateChange(_stateSnapshotAtLastNewline!.currentText, state.currentText, _stateSnapshotAtLastNewline!.currentTags.count, state.currentTags.count)
+                let change = CalculateNewlineOutputStateChange(_stateSnapshotAtLastNewline!.currentText, state.currentText, _stateSnapshotAtLastNewline!.currentTags.count, state.currentTags.count)
                 
                 // The last time we saw a newline, it was definitely the end of the line, so we
                 // want to rewind to that point.
@@ -533,9 +533,9 @@ public class Story: Object {
     func CalculateNewlineOutputStateChange(_ prevText: String, _ currText: String, _ prevTagCount: Int, _ currTagCount: Int) -> OutputStateChange {
         // Simple case: nothing's changed, and we still have a newline
         // at the end of the current content
-        var currTextArray = Array(currText.unicodeScalars)
+        let currTextArray = Array(currText.unicodeScalars)
         
-        var newlineStillExists = currText.count >= prevText.count && prevText.count > 0 && currTextArray[prevText.count - 1] == "\n"
+        let newlineStillExists = currText.count >= prevText.count && prevText.count > 0 && currTextArray[prevText.count - 1] == "\n"
         if prevTagCount == currTagCount && prevText.count == currText.count && newlineStillExists {
             return .noChange
         }
@@ -552,7 +552,7 @@ public class Story: Object {
         
         // There must be new content - check whether it's just whitespace
         for i in prevText.count ..< currText.count {
-            var c = currTextArray[i]
+            let c = currTextArray[i]
             if c != " " && c != "\t" {
                 return .extendedBeyondNewline
             }
@@ -679,7 +679,7 @@ public class Story: Object {
         if _asyncSaving {
             throw StoryError.cantSaveOnBackgroundThreadTwice
         }
-        var stateToSave = _state
+        let stateToSave = _state
         _state = state.CopyAndStartPatching()
         _asyncSaving = true
         return stateToSave!
@@ -738,7 +738,7 @@ public class Story: Object {
         // Stop flow if we hit a stack pop when we're unable to pop (e.g. return/done statement in knot
         // that was diverted to rather than called as a function)
         var currentContentObj = pointer.Resolve()
-        var isLogicOrFlowControl = try PerformLogicAndFlowControl(currentContentObj)
+        let isLogicOrFlowControl = try PerformLogicAndFlowControl(currentContentObj)
         
         
         // Has flow been forced to end by flow control above?
@@ -773,7 +773,7 @@ public class Story: Object {
             // so that we're not editing the original runtime object.
             if let varPointer = currentContentObj as? VariablePointerValue, varPointer.contextIndex == -1 {
                 // Create new object so we're not overwriting the story's own data
-                var contextIdx = state.callStack.ContextForVariableNamed(varPointer.variableName)
+                let contextIdx = state.callStack.ContextForVariableNamed(varPointer.variableName)
                 currentContentObj = VariablePointerValue(varPointer.variableName, contextIdx)
             }
             
@@ -814,8 +814,8 @@ public class Story: Object {
     var _prevContainers: [Container] = []
     
     func VisitChangedContainersDueToDivert() throws {
-        var previousPointer = state.previousPointer
-        var pointer = state.currentPointer
+        let previousPointer = state.previousPointer
+        let pointer = state.currentPointer
         
         // Unless we're pointing *directly* at a piece of content, we don't do
         // counting here. Otherwise, the main stepping function will do the counting.
@@ -848,7 +848,7 @@ public class Story: Object {
         while currentContainerAncestor != nil && (!_prevContainers.contains(currentContainerAncestor!) || currentContainerAncestor!.countingAtStartOnly) {
             // Check whether this ancestor container is being entered at the start,
             // by checking whether the child object is the first.
-            var enteringAtStart = currentContainerAncestor!.content.count > 0 && currentChildOfContainer == currentContainerAncestor!.content[0] && allChildrenEnteredAtStart
+            let enteringAtStart = currentContainerAncestor!.content.count > 0 && currentChildOfContainer == currentContainerAncestor!.content[0] && allChildrenEnteredAtStart
             
             // Don't count it as entering at start if we're entering random somewhere within
             // a container B that happens to be nested at index 0 of container A. It only counts
@@ -866,13 +866,13 @@ public class Story: Object {
     }
     
     func PopChoiceStringAndTags(_ tags: inout [String]?) -> String? {
-        var choiceOnlyStrVal = state.PopEvaluationStack() as! StringValue
+        let choiceOnlyStrVal = state.PopEvaluationStack() as! StringValue
         
         while state.evaluationStack.count > 0 && state.PeekEvaluationStack() is Tag {
             if tags == nil {
                 tags = []
             }
-            var tag = state.PopEvaluationStack() as! Tag
+            let tag = state.PopEvaluationStack() as! Tag
             tags?.insert(tag.text, at: 0) // popped in reverse order
         }
         
@@ -884,7 +884,7 @@ public class Story: Object {
         
         // Don't create choice if choice point doesn't pass conditional
         if choicePoint.hasCondition {
-            var conditionValue = state.PopEvaluationStack()
+            let conditionValue = state.PopEvaluationStack()
             if try !IsTruthy(conditionValue!) {
                 showChoice = false
             }
@@ -904,7 +904,7 @@ public class Story: Object {
         
         // Don't create choice if player has already read this content
         if choicePoint.onceOnly {
-            var visitCount = try state.VisitCountForContainer(choicePoint.choiceTarget!)
+            let visitCount = try state.VisitCountForContainer(choicePoint.choiceTarget!)
             if visitCount > 0 {
                 showChoice = false
             }
@@ -917,7 +917,7 @@ public class Story: Object {
             return nil
         }
         
-        var choice = Choice()
+        let choice = Choice()
         choice.targetPath = choicePoint.pathOnChoice
         choice.sourcePath = choicePoint.path.description
         choice.isInvisibleDefault = choicePoint.isInvisibleDefault
@@ -964,7 +964,7 @@ public class Story: Object {
         // Divert
         if let currentDivert = contentObj as? Divert {
             if currentDivert.isConditional {
-                var conditionValue = state.PopEvaluationStack()
+                let conditionValue = state.PopEvaluationStack()
                 
                 // False conditional? Cancel divert
                 if try !IsTruthy(conditionValue!) {
@@ -973,14 +973,14 @@ public class Story: Object {
             }
             
             if currentDivert.hasVariableTarget {
-                var varName = currentDivert.variableDivertName
-                var varContents = state.variablesState?.GetVariableWithName(varName)
+                let varName = currentDivert.variableDivertName
+                let varContents = state.variablesState?.GetVariableWithName(varName)
                 if varContents == nil {
                     try Error("Tried to divert using a target from a variable that could not be found (\(varName!))")
                 }
                 else if !(varContents is DivertTargetValue) {
                     var errorMessage = "Tried to divert to a target from a variable, but the variable (\(varName!)) didn't contain a divert target, it "
-                    if let intContent = varContents as? IntValue {
+                    if varContents is IntValue {
                         errorMessage += "was empty/null (the value 0)."
                     }
                     else {
@@ -990,7 +990,7 @@ public class Story: Object {
                     try Error(errorMessage)
                 }
                 
-                var target = varContents as! DivertTargetValue
+                let target = varContents as! DivertTargetValue
                 state.divertedPointer = try PointerAtPath(target.targetPath)
             }
             
@@ -1036,14 +1036,14 @@ public class Story: Object {
             case .evalOutput:
                 // If the expression turned out to be empty, there may not be anything on the stack
                 if !state.evaluationStack.isEmpty {
-                    var output = state.PopEvaluationStack()
+                    let output = state.PopEvaluationStack()
                     
                     // Functions may evaluate to Void, in which case we skip output
                     if !(output is Void) {
                         // TODO: Should we really always blanket convert to string?
                         // It would be okay to have numbers in the output stream, the
                         // only problem is when exporting text for viewing, it skips over numbers etc.
-                        var text = StringValue(String(describing: output!))
+                        let text = StringValue(String(describing: output!))
                         state.PushToOutputStream(text)
                     }
                 }
@@ -1054,18 +1054,18 @@ public class Story: Object {
                 state.PushEvaluationStack(state.PeekEvaluationStack()!)
                 break
             case .popEvaluatedValue:
-                state.PopEvaluationStack()
+                _ = state.PopEvaluationStack()
                 break
             case .popFunction:
                 fallthrough
             case .popTunnel:
-                var popType = evalCommand.commandType == .popFunction ? PushPopType.Function : PushPopType.Tunnel
+                let popType = evalCommand.commandType == .popFunction ? PushPopType.Function : PushPopType.Tunnel
                 
                 // Tunnel onwards is allowed to specify an optional override
                 // divert to go to immediately after returning: ->-> target
                 var overrideTunnelReturnTarget: DivertTargetValue? = nil
                 if popType == .Tunnel {
-                    var popped = state.PopEvaluationStack()
+                    let popped = state.PopEvaluationStack()
                     overrideTunnelReturnTarget = popped as? DivertTargetValue
                     if overrideTunnelReturnTarget == nil {
                         try Assert(popped is Void, "Expected void if ->-> doesn't override target")
@@ -1085,7 +1085,7 @@ public class Story: Object {
                         expected = "end of flow (-> END or choice)"
                     }
                     
-                    var errorMsg = "Found \(names[popType]!), when expected \(expected!)"
+                    let errorMsg = "Found \(names[popType]!), when expected \(expected!)"
                     try Error(errorMsg)
                 }
                 
@@ -1146,7 +1146,7 @@ public class Story: Object {
                     var outputCountConsumed = 0
                     
                     for i in (0...state.outputStream.count - 1).reversed() {
-                        var obj = state.outputStream[i]
+                        let obj = state.outputStream[i]
                         
                         outputCountConsumed += 1
                         
@@ -1173,7 +1173,7 @@ public class Story: Object {
                         sb += strVal.value!
                     }
                     
-                    var choiceTag = Tag(text: state.CleanOutputWhitespace(sb))
+                    let choiceTag = Tag(text: state.CleanOutputWhitespace(sb))
                     
                     // Pushing to the evaluation stack means it gets picked up
                     // when a Choice is generated from the next Choice Point.
@@ -1197,7 +1197,7 @@ public class Story: Object {
                 
                 var outputCountConsumed = 0
                 for i in (0...state.outputStream.count - 1).reversed() {
-                    var obj = state.outputStream[i]
+                    let obj = state.outputStream[i]
                     
                     outputCountConsumed += 1
                     
@@ -1237,7 +1237,7 @@ public class Story: Object {
                 break
                 
             case .choiceCount:
-                var choiceCount = state.generatedChoices.count
+                let choiceCount = state.generatedChoices.count
                 state.PushEvaluationStack(IntValue(choiceCount))
                 break
                 
@@ -1249,7 +1249,7 @@ public class Story: Object {
                 fallthrough
                 
             case .readCount:
-                var target = state.PopEvaluationStack()
+                let target = state.PopEvaluationStack()
                 if !(target is DivertTargetValue) {
                     var extraNote = ""
                     if target is IntValue {
@@ -1259,9 +1259,9 @@ public class Story: Object {
                     break
                 }
                 
-                var divertTarget = target as! DivertTargetValue
+                let divertTarget = target as! DivertTargetValue
                 var eitherCount = 0 // value not explicitly defined in C# code, so I assume it defaults to 0?
-                if var container = ContentAtPath(divertTarget.targetPath)?.correctObj as? Container {
+                if let container = ContentAtPath(divertTarget.targetPath)?.correctObj as? Container {
                     if evalCommand.commandType == .turnsSince {
                         eitherCount = try state.TurnsSinceForContainer(container)
                     }
@@ -1284,27 +1284,27 @@ public class Story: Object {
                 break
                 
             case .random:
-                guard var maxInt = state.PopEvaluationStack() as? IntValue else {
+                guard let maxInt = state.PopEvaluationStack() as? IntValue else {
                     try Error("Invalid value for maximum parameter of RANDOM(min, max)")
                     return false
                 }
                 
-                guard var minInt = state.PopEvaluationStack() as? IntValue else {
+                guard let minInt = state.PopEvaluationStack() as? IntValue else {
                     try Error("Invalid value for minimum parameter of RANDOM(min, max)")
                     return false
                 }
                 
                 // +1 because it's inclusive of min and max, for e.g. RANDOM(1,6) for a dice roll.
-                var randomRange = maxInt.value! - minInt.value! + 1
+                let randomRange = maxInt.value! - minInt.value! + 1
                 if randomRange <= 0 {
                     try Error("RANDOM() was called with minimum as \(minInt.value!) and maximum as \(maxInt.value!). The maximum must be larger")
                 }
                 
-                var resultSeed = state.storySeed + state.previousRandom
-                var random = Random(withSeed: resultSeed)
+                let resultSeed = state.storySeed + state.previousRandom
+                let random = Random(withSeed: resultSeed)
                 
-                var nextRandom = Int(random.next())
-                var chosenValue = (nextRandom % randomRange) + minInt.value!
+                let nextRandom = Int(random.next())
+                let chosenValue = (nextRandom % randomRange) + minInt.value!
                 state.PushEvaluationStack(IntValue(chosenValue))
                 
                 // Next random number (rather than keeping the Random object around)
@@ -1326,12 +1326,12 @@ public class Story: Object {
                 break
                 
             case .visitIndex:
-                var count = try state.VisitCountForContainer(state.currentPointer.container!) - 1 // index not count
+                let count = try state.VisitCountForContainer(state.currentPointer.container!) - 1 // index not count
                 state.PushEvaluationStack(IntValue(count))
                 break
                 
             case .sequenceShuffleIndex:
-                var shuffleIndex = try NextSequenceShuffleIndex()
+                let shuffleIndex = try NextSequenceShuffleIndex()
                 state.PushEvaluationStack(IntValue(shuffleIndex))
                 break
                 
@@ -1367,7 +1367,7 @@ public class Story: Object {
                     throw StoryError.nonIntWhenCreatingListFromNumericalValue
                 }
                 
-                var listNameVal = state.PopEvaluationStack() as! StringValue
+                let listNameVal = state.PopEvaluationStack() as! StringValue
                 
                 var generatedListValue: ListValue? = nil
                 
@@ -1388,17 +1388,17 @@ public class Story: Object {
                 break
                 
             case .listRange:
-                var max = state.PopEvaluationStack() as? (any BaseValue)
-                var min = state.PopEvaluationStack() as? (any BaseValue)
+                let max = state.PopEvaluationStack() as? (any BaseValue)
+                let min = state.PopEvaluationStack() as? (any BaseValue)
                 
-                var targetList = state.PopEvaluationStack() as? ListValue
+                let targetList = state.PopEvaluationStack() as? ListValue
                 
                 if targetList == nil || min == nil || max == nil {
                     throw StoryError.expectedListMinAndMaxForListRange
                 }
                 
                 // TODO: FIX THIS!
-                var result = targetList!.value!.ListWithSubrange(min?.valueObject, max?.valueObject)
+                let result = targetList!.value!.ListWithSubrange(min?.valueObject, max?.valueObject)
                 state.PushEvaluationStack(ListValue(result))
                 break
                 
@@ -1407,7 +1407,7 @@ public class Story: Object {
                     throw StoryError.expectedListForListRandom
                 }
                 
-                var list = listVal.value!
+                let list = listVal.value!
                 
                 var newList: InkList? = nil
                 
@@ -1418,18 +1418,18 @@ public class Story: Object {
                 
                 // Non-empty source list
                 else {
-                    var resultSeed = state.storySeed + state.previousRandom
-                    var random = Random(withSeed: resultSeed)
+                    let resultSeed = state.storySeed + state.previousRandom
+                    let random = Random(withSeed: resultSeed)
                     
-                    var nextRandom = Int(random.next())
-                    var listItemIndex = nextRandom % list.count
+                    let nextRandom = Int(random.next())
+                    let listItemIndex = nextRandom % list.count
                     
                     // Iterate through to get the random element
                     var listEnumerator = list.internalDict.enumerated().makeIterator()
-                    for i in 0 ..< listItemIndex {
-                        listEnumerator.next()
+                    for _ in 0 ..< listItemIndex {
+                        _ = listEnumerator.next()
                     }
-                    var randomItem = listEnumerator.next()!.element
+                    let randomItem = listEnumerator.next()!.element
                     
                     // Origin list is simply the origin of the one element
                     newList = InkList(randomItem.key.originName!, self)
@@ -1451,7 +1451,7 @@ public class Story: Object {
         
         // Variable assignment
         else if let varAss = contentObj as? VariableAssignment {
-            var assignedVal = state.PopEvaluationStack()
+            let assignedVal = state.PopEvaluationStack()
             
             // When in temporary evaluation, don't create new variables purely within
             // the temporary context, but attempt to create them globally
@@ -1466,8 +1466,8 @@ public class Story: Object {
             
             // Explicit read count value
             if varRef.pathForCount != nil {
-                var container = varRef.containerForCount
-                var count = try state.VisitCountForContainer(container!)
+                let container = varRef.containerForCount
+                let count = try state.VisitCountForContainer(container!)
                 foundValue = IntValue(count)
             }
             
@@ -1487,8 +1487,8 @@ public class Story: Object {
         
         // Native function call
         else if let function = contentObj as? NativeFunctionCall {
-            var funcParams = try state.PopEvaluationStack(function.numberOfParameters)
-            var result = try function.Call(funcParams)
+            let funcParams = try state.PopEvaluationStack(function.numberOfParameters)
+            let result = try function.Call(funcParams)
             state.PushEvaluationStack(result!)
             return true
         }
@@ -1568,7 +1568,7 @@ public class Story: Object {
     /// index. Internally, this sets the current content path to that
     /// pointed to by the `Choice`, ready to continue story evaluation.
     public func ChooseChoiceIndex(_ choiceIdx: Int) throws {
-        var choices = currentChoices
+        let choices = currentChoices
         try Assert(choiceIdx >= 0 && choiceIdx < choices.count, "choice out of range")
         
         // Replace callstack with the one from the thread at the choosing point,
@@ -1576,7 +1576,7 @@ public class Story: Object {
         // This is important in case the flow was forked by a new thread, which
         // can create multiple leading edges for the story, each of
         // which has its own context.
-        var choiceToChoose = choices[choiceIdx]
+        let choiceToChoose = choices[choiceIdx]
         delegate?.onMakeChoice(named: choiceToChoose)
         state.callStack.currentThread = choiceToChoose.threadAtGeneration!
         
@@ -1595,7 +1595,7 @@ public class Story: Object {
     /// - Parameter functionName: The name of the function as declared in ink.
     /// - Parameter arguments: The arguments that the ink function takes, if any. Note that we don't (can't) do any validation on the number of arguments right now, so make sure you get it right!
     public func EvaluateFunction(_ functionName: String, _ arguments: Any?...) -> Any? {
-        var s = ""
+        let s = ""
         return EvaluateFunction(functionName, s, arguments)
     }
     
@@ -1622,7 +1622,7 @@ public class Story: Object {
         }
         
         // Snapshot the output stream
-        var outputStreamBefore = state.outputStream
+        let outputStreamBefore = state.outputStream
         state.ResetOutput()
         
         // State will temporarily replace the callstack in order to evaluate
@@ -1640,7 +1640,7 @@ public class Story: Object {
         state.ResetOutput(outputStreamBefore)
         
         // Finish evaluation, and see whether anything was produced
-        var result = try state.CompleteFunctionEvaluationFromGame()
+        let result = try state.CompleteFunctionEvaluationFromGame()
         delegate?.onCompleteEvaluateFunction(named: functionName!, withArguments: arguments, outputtingText: textOutput, withResult: result)
         return result
     }
@@ -1648,7 +1648,7 @@ public class Story: Object {
     // Evaluate a "hot compiled" piece of ink content, as used by the REPL-like
     // CommandLinePlayer.
     public func EvaluateExpression(_ exprContainer: Container) throws -> Object? {
-        var startCallStackHeight = state.callStack.elements.count
+        let startCallStackHeight = state.callStack.elements.count
         
         state.callStack.Push(.Tunnel)
         
@@ -1656,9 +1656,9 @@ public class Story: Object {
         
         state.GoToStart()
         
-        var evalStackHeight = state.evaluationStack.count
+        let evalStackHeight = state.evaluationStack.count
         
-        try Continue()
+        _ = try Continue()
         
         _temporaryEvaluationContainer = nil
         
@@ -1669,7 +1669,7 @@ public class Story: Object {
             state.PopCallstack()
         }
         
-        var endStackHeight = state.evaluationStack.count
+        let endStackHeight = state.evaluationStack.count
         if endStackHeight > evalStackHeight {
             return state.PopEvaluationStack()
         }
@@ -1719,7 +1719,7 @@ public class Story: Object {
         // Pop arguments
         var arguments: [Any?] = []
         for _ in 0 ..< numberOfArguments {
-            var poppedObj = state.PopEvaluationStack() as? (any BaseValue)
+            let poppedObj = state.PopEvaluationStack() as? (any BaseValue)
             arguments.append(poppedObj?.valueObject)
         }
         
@@ -1728,7 +1728,7 @@ public class Story: Object {
         arguments.reverse()
         
         // Run the function!
-        var funcResult = funcDef!.function(arguments)
+        let funcResult = funcDef!.function(arguments)
         
         // Convert return value (if any) to a type that the ink engine can use
         var returnObj: Object? = nil
@@ -1819,14 +1819,14 @@ public class Story: Object {
         
         // Error for all missing externals
         if !missingExternals.isEmpty {
-            var message = "ERROR: Missing function binding for external\(missingExternals.count > 1 ? "s" : ""): '\(missingExternals.joined(separator: ", "))' \(allowExternalFunctionFallbacks ? ",and now fallback ink function found." : "(ink fallbacks disabled)")"
+            let message = "ERROR: Missing function binding for external\(missingExternals.count > 1 ? "s" : ""): '\(missingExternals.joined(separator: ", "))' \(allowExternalFunctionFallbacks ? ",and now fallback ink function found." : "(ink fallbacks disabled)")"
             try Error(message)
         }
     }
     
     func ValidateExternalBindings(_ c: Container, _ missingExternals: inout Set<String>) {
         for innerContent in c.content {
-            var container = innerContent as? Container
+            let container = innerContent as? Container
             if container == nil || !container!.hasValidName {
                 ValidateExternalBindings(innerContent, &missingExternals)
             }
@@ -1843,10 +1843,10 @@ public class Story: Object {
         }
         
         if let divert = o as? Divert, divert.isExternal {
-            var name = divert.targetPathString!
+            let name = divert.targetPathString!
             if !_externals.keys.contains(name) {
                 if allowExternalFunctionFallbacks {
-                    var fallbackFound = _mainContentContainer!.namedContent.keys.contains(name)
+                    let fallbackFound = _mainContentContainer!.namedContent.keys.contains(name)
                     if !fallbackFound {
                         missingExternals.insert(name)
                     }
@@ -1941,7 +1941,7 @@ public class Story: Object {
                 throw StoryError.variableNotStandardType
             }
             
-            var val = newValue as! (any BaseValue)
+            let val = newValue as! (any BaseValue)
             for observer in observers {
                 
                 observer.onVariableChanged?(variableName, val.valueObject)
@@ -1964,12 +1964,12 @@ public class Story: Object {
     }
     
     func TagsAtStartOfFlowContainerWithPathString(_ pathString: String) throws -> [String] {
-        var path = Path(pathString)
+        let path = Path(pathString)
         
         // Expected to be global story, knot, or stitch
         var flowContainer = ContentAtPath(path)?.container
         while true {
-            var firstContent = flowContainer?.content[0]
+            let firstContent = flowContainer?.content[0]
             if firstContent is Container {
                 flowContainer = firstContent as? Container
             }
@@ -2051,7 +2051,7 @@ public class Story: Object {
             // to the end of a container - e.g. a Conditional that's rejoining
         }
         
-        var successfulPointerIncrement = IncrementContentPointer()
+        let successfulPointerIncrement = IncrementContentPointer()
         
         // Ran out of content? Try to auto-exit from a function,
         // or finish evaluating the content of a thread
@@ -2075,7 +2075,7 @@ public class Story: Object {
                 didPop = true
             }
             else {
-                state.TryExitFunctionEvaluationFromGame()
+                _ = state.TryExitFunctionEvaluationFromGame()
             }
             
             // Step past the point where we last called out
@@ -2122,15 +2122,15 @@ public class Story: Object {
     
 
     func TryFollowDefaultInvisibleChoice() throws -> Bool {
-        var allChoices = state.currentChoices
+        let allChoices = state.currentChoices
         
         // Is a default invisible choice the ONLY choice?
-        var invisibleChoices = allChoices.filter({ $0.isInvisibleDefault! })
+        let invisibleChoices = allChoices.filter({ $0.isInvisibleDefault! })
         if invisibleChoices.count == 0 || allChoices.count > invisibleChoices.count {
             return false
         }
         
-        var choice = invisibleChoices[0]
+        let choice = invisibleChoices[0]
         
         // Invisible choice may have been generated on a different thread,
         // in which case we need to restore it before we continue.
@@ -2157,27 +2157,27 @@ public class Story: Object {
             return 0
         }
         
-        var seqContainer = state.currentPointer.container
+        let seqContainer = state.currentPointer.container
         
-        var numElements = numElementsIntVal.value!
+        let numElements = numElementsIntVal.value!
         
-        var seqCountVal = state.PopEvaluationStack() as! IntValue
-        var seqCount = seqCountVal.value!
-        var loopIndex = seqCount / numElements
-        var iterationIndex = seqCount % numElements
+        let seqCountVal = state.PopEvaluationStack() as! IntValue
+        let seqCount = seqCountVal.value!
+        let loopIndex = seqCount / numElements
+        let iterationIndex = seqCount % numElements
         
         // Generate the same shuffle based on:
         // - The hash of this container, to make sure it's consistent
         //   each time the runtime returns to the sequence
         // - How many times the runtime has looped around this full shuffle
-        var seqPathStr = seqContainer!.path.description
+        let seqPathStr = seqContainer!.path.description
         var sequenceHash = 0
         for c in seqPathStr {
             sequenceHash += Int(c.asciiValue!)
         }
         
-        var randomSeed = sequenceHash + loopIndex + state.storySeed
-        var random = Random(withSeed: randomSeed)
+        let randomSeed = sequenceHash + loopIndex + state.storySeed
+        let random = Random(withSeed: randomSeed)
         
         var unpickedIndices: [Int] = []
         for i in 0 ..< numElements {
@@ -2185,8 +2185,8 @@ public class Story: Object {
         }
         
         for i in 0 ... iterationIndex {
-            var chosen = Int(random.next()) % unpickedIndices.count
-            var chosenIndex = unpickedIndices[chosen]
+            let chosen = Int(random.next()) % unpickedIndices.count
+            let chosenIndex = unpickedIndices[chosen]
             unpickedIndices.remove(at: chosen)
             
             if i == iterationIndex {
@@ -2208,12 +2208,12 @@ public class Story: Object {
     
     func AddError(_ message: String, isWarning: Bool = false, useEndLineNumber: Bool = false) {
         var message = message
-        var dm = currentDebugMetadata
+        let dm = currentDebugMetadata
         
-        var errorTypeStr = isWarning ? "WARNING" : "ERROR"
+        let errorTypeStr = isWarning ? "WARNING" : "ERROR"
         
         if dm != nil {
-            var lineNum = useEndLineNumber ? dm!.endLineNumber : dm!.startLineNumber
+            let lineNum = useEndLineNumber ? dm!.endLineNumber : dm!.startLineNumber
             message = "RUNTIME \(errorTypeStr): '\(dm!.fileName!)' line \(lineNum): \(message)"
         }
         else if !state.currentPointer.isNull {
@@ -2272,7 +2272,7 @@ public class Story: Object {
         // or if we've simply run out of content.
         // As a last resort, try to grab something from the output stream.
         for i in (0 ... state.outputStream.count - 1).reversed() {
-            var outputObj = state.outputStream[i]
+            let outputObj = state.outputStream[i]
             dm = outputObj.debugMetadata
             if dm != nil {
                 return dm!

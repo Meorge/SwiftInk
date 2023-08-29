@@ -54,10 +54,10 @@ public class Profiler {
         for i in 0 ..< callstack.elements.count {
             var stackElementName: String = ""
             if !callstack.elements[i].currentPointer.isNull {
-                var objPath = callstack.elements[i].currentPointer.path!
+                let objPath = callstack.elements[i].currentPointer.path!
                 
                 for c in 0 ..< objPath.length {
-                    var comp = objPath.GetComponent(c)
+                    let comp = objPath.GetComponent(c)
                     if !comp.isIndex {
                         stackElementName = comp.name!
                         break
@@ -70,10 +70,10 @@ public class Profiler {
         
         _currStepStack = stack
         
-        var currObj = callstack.currentElement.currentPointer.Resolve()
+        let currObj = callstack.currentElement.currentPointer.Resolve()
         
         var stepType: String? = nil
-        var controlCommandStep = currObj as? ControlCommand
+        let controlCommandStep = currObj as? ControlCommand
         if controlCommandStep != nil {
             stepType = "\(controlCommandStep!.commandType) CC"
         }
@@ -89,7 +89,7 @@ public class Profiler {
     public func PostStep() {
         _stepWatch.Stop()
         
-        var duration = Millisecs(_stepWatch)
+        let duration = Millisecs(_stepWatch)
         _stepTotal += duration
         
         _rootNode.AddSample(_currStepStack!, duration)
@@ -236,7 +236,7 @@ public class ProfileNode: CustomStringConvertible {
     }
     
     func AddSampleToNode(_ stack: [String], _ stackIdx: Int, _ duration: Double) {
-        var nodeKey = stack[stackIdx]
+        let nodeKey = stack[stackIdx]
 
         var node: ProfileNode
         if _nodes.keys.contains(nodeKey) {

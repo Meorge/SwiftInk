@@ -17,9 +17,9 @@ public class ListDefinitionsOrigin {
             _lists[list.name] = list
             
             for itemWithValue in list.items {
-                var item = itemWithValue.key
-                var val = itemWithValue.value
-                var listValue = ListValue(item, val)
+                let item = itemWithValue.key
+                let val = itemWithValue.value
+                let listValue = ListValue(item, val)
                 
                 // May be ambiguous, but compiler should've caught that,
                 // so we may be doing some replacement here, but that's okay.

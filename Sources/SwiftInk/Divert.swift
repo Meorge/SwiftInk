@@ -4,7 +4,7 @@ public class Divert: Object, CustomStringConvertible {
     public var targetPath: Path? {
         get {
             if _targetPath != nil && _targetPath!.isRelative {
-                var targetObj = targetPointer!.Resolve()
+                let targetObj = targetPointer!.Resolve()
                 if targetObj != nil {
                     _targetPath = targetObj!.path
                 }
@@ -21,7 +21,7 @@ public class Divert: Object, CustomStringConvertible {
     public var targetPointer: Pointer? {
         get {
             if _targetPointer == nil || _targetPointer!.isNull {
-                var targetObj = ResolvePath(_targetPath!)?.obj
+                let targetObj = ResolvePath(_targetPath!)?.obj
                 
                 if (_targetPath?.lastComponent?.isIndex ?? false) {
                     _targetPointer?.container = targetObj?.parent as? Container
@@ -114,7 +114,7 @@ public class Divert: Object, CustomStringConvertible {
         
         var sb = ""
         var targetStr = String(describing: targetPath!)
-        var targetLineNum = DebugLineNumberOfPath(path: targetPath)
+        let targetLineNum = DebugLineNumberOfPath(path: targetPath)
         if targetLineNum != nil {
             targetStr = "line \(targetLineNum!) "
         }

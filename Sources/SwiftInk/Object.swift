@@ -56,7 +56,7 @@ public class Object: Equatable, Hashable {
                 var container: Container? = child!.parent as? Container
                 
                 while container != nil {
-                    var namedChild = child as? Nameable
+                    let namedChild = child as? Nameable
                     if namedChild != nil && namedChild!.hasValidName {
                         comps.append(Path.Component(namedChild!.name!))
                     }
@@ -102,14 +102,14 @@ public class Object: Equatable, Hashable {
         // 2. Drill up using ".." style (actually represented as "^")
         // 3. Re-build downward chain from common ancestor
         
-        var ownPath = path
+        let ownPath = path
         
-        var minPathLength = min(globalPath.length, ownPath.length)
+        let minPathLength = min(globalPath.length, ownPath.length)
         var lastSharedPathCompIndex = -1
         
         for i in 0 ..< minPathLength {
-            var ownComp = ownPath.GetComponent(i)
-            var otherComp = globalPath.GetComponent(i)
+            let ownComp = ownPath.GetComponent(i)
+            let otherComp = globalPath.GetComponent(i)
             
             if ownComp == otherComp {
                 lastSharedPathCompIndex = i
@@ -124,7 +124,7 @@ public class Object: Equatable, Hashable {
             return globalPath
         }
         
-        var numUpwardsMoves = (ownPath.length - 1) - lastSharedPathCompIndex
+        let numUpwardsMoves = (ownPath.length - 1) - lastSharedPathCompIndex
         
         var newPathComps: [Path.Component] = []
         
@@ -136,7 +136,7 @@ public class Object: Equatable, Hashable {
             newPathComps.append(globalPath.GetComponent(down))
         }
         
-        var relativePath = Path(newPathComps, true)
+        let relativePath = Path(newPathComps, true)
         return relativePath
     }
     
@@ -149,7 +149,7 @@ public class Object: Equatable, Hashable {
             globalPathStr = path.PathByAppendingPath(otherPath).componentsString
         }
         else {
-            var relativePath = ConvertPathToRelative(otherPath)
+            let relativePath = ConvertPathToRelative(otherPath)
             relativePathStr = relativePath?.componentsString
             globalPathStr = otherPath.componentsString
         }

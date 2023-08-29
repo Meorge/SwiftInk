@@ -23,7 +23,7 @@ public class Flow {
         self.currentChoices = try JArrayToRuntimeObjList(jsonArray: jObject["currentChoices"]!.arrayValue).map { $0 as! Choice }
         
         // choiceThreads is optional
-        var jChoiceThreadsObj = jObject["choiceThreads"]!.dictionary!
+        let jChoiceThreadsObj = jObject["choiceThreads"]!.dictionary!
         try LoadFlowChoiceThreads(jChoiceThreadsObj, story)
     }
     

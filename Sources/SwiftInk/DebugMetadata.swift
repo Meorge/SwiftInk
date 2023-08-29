@@ -13,7 +13,7 @@ public class DebugMetadata: CustomStringConvertible {
     }
     
     public func Merge(_ dm: DebugMetadata) -> DebugMetadata {
-        var newDebugMetadata = DebugMetadata()
+        let newDebugMetadata = DebugMetadata()
         
         // These are not supposed to differ between 'self' and 'dm'
         newDebugMetadata.fileName = fileName

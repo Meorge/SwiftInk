@@ -30,7 +30,7 @@ public class Container: Object, Nameable {
             }
             
             for c in content {
-                var named = c as? Nameable
+                let named = c as? Nameable
                 if named != nil && named!.hasValidName {
                     namedOnlyContentDict.removeValue(forKey: named!.name!)
                 }
@@ -43,7 +43,7 @@ public class Container: Object, Nameable {
             return namedOnlyContentDict
         }
         set {
-            var existingNamedOnly = namedOnlyContent
+            let existingNamedOnly = namedOnlyContent
             if existingNamedOnly != nil {
                 for kvPair in existingNamedOnly! {
                     namedContent.removeValue(forKey: kvPair.key)
@@ -238,7 +238,7 @@ public class Container: Object, Nameable {
         var currentObj: Object? = self
         
         for i in partialPathStart ..< partialPathLength {
-            var comp = path.GetComponent(i)
+            let comp = path.GetComponent(i)
             
             // Path component was wrong type
             if currentContainer == nil {
@@ -246,7 +246,7 @@ public class Container: Object, Nameable {
                 break
             }
             
-            var foundObj = currentContainer!.ContentWithPathComponent(comp)
+            let foundObj = currentContainer!.ContentWithPathComponent(comp)
             
             // Couldn't resolve entire path?
             if foundObj == nil {
@@ -290,7 +290,7 @@ public class Container: Object, Nameable {
         currentIndentation += 1
         
         for i in 0 ..< content.count {
-            var obj = content[i]
+            let obj = content[i]
             
             if let container = obj as? Container {
                 sb = container.BuildStringOfHierarchy(sb, currentIndentation, pointedObj)
@@ -335,7 +335,7 @@ public class Container: Object, Nameable {
             sb.append("-- named: --\n")
             for objKV in onlyNamed {
                 assert(objKV.value is Container, "Can only print out named Containers")
-                var container = objKV.value as! Container
+                let container = objKV.value as! Container
                 sb = container.BuildStringOfHierarchy(sb, currentIndentation, pointedObj)
                 sb.append("\n")
             }
@@ -348,7 +348,7 @@ public class Container: Object, Nameable {
     }
     
     public func BuildStringOfHierarchy() -> String {
-        var sb = BuildStringOfHierarchy("", 0, nil)
+        let sb = BuildStringOfHierarchy("", 0, nil)
         return sb
     }
 }

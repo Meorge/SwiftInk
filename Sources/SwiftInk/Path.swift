@@ -108,7 +108,7 @@ public class Path: Equatable, CustomStringConvertible {
     public static var selfPath: Path {
         /// NOTE: Defined as `self` in original C# code, but
         /// `selfPath` is used here to avoid name conflicts
-        var path = Path()
+        let path = Path()
         path.isRelative = true
         return path
     }

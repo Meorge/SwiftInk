@@ -39,7 +39,7 @@ public class VariablesState: Sequence {
         _batchObservingVariableChanges = false
         if _changedVariablesForBatchObs != nil {
             for variableName in _changedVariablesForBatchObs! {
-                var currentValue = _globalVariables[variableName]!
+                let currentValue = _globalVariables[variableName]!
                 try variableChangedEvent?(variableName, currentValue)
             }
         }
@@ -84,7 +84,7 @@ public class VariablesState: Sequence {
             throw StoryError.cannotAssignToUndeclaredVariable(name: variableName)
         }
         
-        var val = CreateValue(newValue)
+        let val = CreateValue(newValue)
         if val == nil {
             if newValue == nil {
                 throw StoryError.cannotPassNilToVariableState
@@ -95,7 +95,7 @@ public class VariablesState: Sequence {
             
         }
         
-        SetGlobal(variableName, val! as! Object)
+        SetGlobal(variableName, val!)
     }
     
     /// Iterator to allow iteration over all global variables by name.
@@ -290,8 +290,8 @@ public class VariablesState: Sequence {
     }
     
     func RetainListOriginsForAssignment(_ oldValue: Object?, _ newValue: Object?) {
-        var oldList = oldValue as? ListValue
-        var newList = newValue as? ListValue
+        let oldList = oldValue as? ListValue
+        let newList = newValue as? ListValue
         if oldList != nil && newList != nil && newList!.value!.count == 0 {
             newList!.value?.SetInitialOriginNames(oldList!.value!.originNames)
         }
@@ -330,7 +330,7 @@ public class VariablesState: Sequence {
             contextIndex = GetContextIndexOfVariableNamed(varPointer.variableName)
         }
         
-        var valueOfVariablePointedTo = GetRawVariableWithName(varPointer.variableName, contextIndex)
+        let valueOfVariablePointedTo = GetRawVariableWithName(varPointer.variableName, contextIndex)
         
         // Extra layer of indirection:
         // When accessing a pointer to a pointer (e.g. when calling nested or

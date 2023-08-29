@@ -55,7 +55,6 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     public init(_ otherList: InkList) {
         self.internalDict = otherList.internalDict
         
-        var otherOriginNames = otherList.originNames
         if let otherOriginNames = otherList.originNames {
             _originNames = Array<String>(otherOriginNames)
         }
@@ -88,9 +87,8 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     ///   - originStory: Origin story.
     /// - Returns: `InkList` created from string list item
     public static func FromString(_ myListItem: String, _ originStory: Story) -> InkList {
-        var listValue = originStory.listDefinitions!.FindSingleItemListWithName(myListItem)
-        if listValue != nil {
-            return InkList(listValue!.value!)
+        if let listValue = originStory.listDefinitions!.FindSingleItemListWithName(myListItem) {
+            return InkList(listValue.value!)
         }
         else {
             fatalError("Could not find the InkListItem from the string \"\(myListItem)\" to create an InkList because it doesn't exist in the original list definition in ink.")
@@ -148,8 +146,8 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
             fatalError("Could not add the item \(itemName)to this list because it isn't known to any list definitions previously associated with this list.")
         }
         
-        var item = InkListItem(foundListDef!.name, itemName)
-        var itemVal = foundListDef!.ValueForItem(item)
+        let item = InkListItem(foundListDef!.name, itemName)
+        let itemVal = foundListDef!.ValueForItem(item)
         internalDict[item] = itemVal
     }
     
@@ -173,7 +171,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// the origin can be resolved from the `originListName`.
     public var origins: [ListDefinition] = []
     public var originOfMaxItem: ListDefinition? {
-        var maxOriginName = maxItem.key.originName
+        let maxOriginName = maxItem.key.originName
         for origin in origins {
             if origin.name == maxOriginName {
                 return origin
@@ -236,7 +234,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     
     /// The inverse of the list, equivalent to calling `LIST_INVERSE(list)` in ink.
     public var inverse: InkList {
-        var list = InkList()
+        let list = InkList()
         for origin in origins {
             for itemAndValue in origin.items {
                 if !internalDict.keys.contains(itemAndValue.key) {
@@ -250,7 +248,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// The list of all items from the original list definition, equivalent to calling
     /// `LIST_ALL(list)` in ink.
     public var all: InkList {
-        var list = InkList()
+        let list = InkList()
         for origin in origins {
             for itemAndValue in origin.items {
                 list.internalDict[itemAndValue.key] = itemAndValue.value
@@ -262,7 +260,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// Returns a new list that is the combination of the current list and one that's
     /// passed in. Equivalent to calling `(list1 + list2)` in ink.
     public func Union(_ otherList: InkList) -> InkList {
-        var union = InkList(self)
+        let union = InkList(self)
         for kv in otherList.internalDict {
             union.internalDict[kv.key] = kv.value
         }
@@ -273,7 +271,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// list that's passed in - i.e. a list of the items that are shared between the
     /// two other lists. Equivalent to calling `(list1 ^ list2)` in ink.
     public func Intersect(_ otherList: InkList) -> InkList {
-        var intersection = InkList()
+        let intersection = InkList()
         for kv in internalDict {
             if otherList.internalDict.keys.contains(kv.key) {
                 intersection.internalDict[kv.key] = kv.value
@@ -296,7 +294,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// removed that are in the passed-in list. Equivalent to calling `(list1 - list2)` in ink.
     /// - Parameter listToRemove: List to remove.
     public func Without(_ listToRemove: InkList) -> InkList {
-        var result = InkList(self)
+        let result = InkList(self)
         for kv in listToRemove.internalDict {
             result.internalDict.removeValue(forKey: kv.key)
         }
@@ -413,7 +411,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
             return InkList()
         }
         
-        var ordered = orderedItems
+        let ordered = orderedItems
         
         var minValue = 0
         var maxValue = Int.max
@@ -436,7 +434,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
             }
         }
         
-        var subList = InkList()
+        let subList = InkList()
         subList.SetInitialOriginNames(originNames)
         for item in ordered {
             if item.value >= minValue && item.value <= maxValue {
@@ -489,7 +487,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// Returns a `String` in the form "a, b, c" with the names of the items in the list, without
     /// the origin list definition names. Equivalent to writing `{list}` in ink.
     public var description: String {
-        var ordered = orderedItems
+        let ordered = orderedItems
         
         var sb = ""
         for i in 0 ..< ordered.count {
@@ -497,7 +495,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
                 sb += ", "
             }
             
-            var item = ordered[i].key
+            let item = ordered[i].key
             sb += item.itemName ?? ""
         }
         

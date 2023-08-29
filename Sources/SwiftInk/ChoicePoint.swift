@@ -6,7 +6,7 @@ public class ChoicePoint: Object, CustomStringConvertible {
             
             // Resolve any relative paths to global ones as we come across them
             if _pathOnChoice != nil && _pathOnChoice!.isRelative {
-                var choiceTargetObj = choiceTarget
+                let choiceTargetObj = choiceTarget
                 if choiceTargetObj != nil {
                     _pathOnChoice = choiceTargetObj!.path
                 }
@@ -20,8 +20,8 @@ public class ChoicePoint: Object, CustomStringConvertible {
     private var _pathOnChoice: Path?
     
     public var choiceTarget: Container? {
-        var thePath = ResolvePath(_pathOnChoice!)
-        var theContainer = thePath?.container
+        let thePath = ResolvePath(_pathOnChoice!)
+        let theContainer = thePath?.container
         return theContainer
     }
     
@@ -78,7 +78,7 @@ public class ChoicePoint: Object, CustomStringConvertible {
     }
     
     public var description: String {
-        var targetLineNum: Int? = DebugLineNumberOfPath(path: pathOnChoice)
+        let targetLineNum: Int? = DebugLineNumberOfPath(path: pathOnChoice)
         var targetString = String(describing: pathOnChoice!)
         
         if targetLineNum != nil {

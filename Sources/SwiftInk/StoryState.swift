@@ -281,7 +281,7 @@ public class StoryState {
                 if let controlCommand = outputObj as? ControlCommand {
                     if controlCommand.commandType == .beginTag {
                         if inTag && !sb.isEmpty {
-                            var txt = CleanOutputWhitespace(sb)
+                            let txt = CleanOutputWhitespace(sb)
                             _currentTags.append(txt)
                             sb = ""
                         }
@@ -290,7 +290,7 @@ public class StoryState {
                     
                     else if controlCommand.commandType == .endTag {
                         if !sb.isEmpty {
-                            var txt = CleanOutputWhitespace(sb)
+                            let txt = CleanOutputWhitespace(sb)
                             _currentTags.append(txt)
                             sb = ""
                         }
@@ -312,7 +312,7 @@ public class StoryState {
             }
             
             if !sb.isEmpty {
-                var txt = CleanOutputWhitespace(sb)
+                let txt = CleanOutputWhitespace(sb)
                 _currentTags.append(txt)
                 sb = ""
             }
@@ -436,7 +436,7 @@ public class StoryState {
     // (e.g. we don't edit a StringValue after it's been created and added.)
     // I wonder if there's a sensible way to enforce that...??
     public func CopyAndStartPatching() -> StoryState {
-        var copy = StoryState(story!)
+        let copy = StoryState(story!)
         
         copy._patch = StatePatch(_patch)
         
@@ -590,7 +590,7 @@ public class StoryState {
     //  - If no splitting is necessary, null is returned.
     //  - A newline on its own is returned in a list for consistency.
     func TrySplittingHeadTailWhitespace(_ single: StringValue) -> [StringValue]? {
-        var str = single.value!
+        let str = single.value!
         
         var headFirstNewlineIdx = -1
         var headLastNewlineIdx = -1
@@ -599,7 +599,7 @@ public class StoryState {
         
         // Look for where the left side starts?
         for i in 0 ..< charArray.count {
-            var c = charArray[i]
+            let c = charArray[i]
             if c == "\n" {
                 if headFirstNewlineIdx == -1 {
                     headFirstNewlineIdx = i
@@ -617,7 +617,7 @@ public class StoryState {
         var tailLastNewlineIdx = -1
         var tailFirstNewlineIdx = -1
         for i in (0...charArray.count-1).reversed() {
-            var c = charArray[i]
+            let c = charArray[i]
             if c == "\n" {
                 if tailLastNewlineIdx == -1 {
                     tailLastNewlineIdx = i
@@ -659,17 +659,17 @@ public class StoryState {
         if innerStrEnd > innerStrStart {
             let startIndex = str.index(str.startIndex, offsetBy: innerStrStart)
             let endIndex = str.index(str.startIndex, offsetBy: innerStrEnd)
-            var innerStrText = String(str[startIndex ..< endIndex])
+            let innerStrText = String(str[startIndex ..< endIndex])
             listTexts.append(StringValue(innerStrText))
         }
         
         if tailLastNewlineIdx != -1 && tailFirstNewlineIdx > headLastNewlineIdx {
             listTexts.append(StringValue("\n"))
             if tailLastNewlineIdx < str.count - 1 {
-                var numSpaces = (str.count - tailLastNewlineIdx) - 1
-                var startIndex = str.index(str.startIndex, offsetBy: tailLastNewlineIdx + 1)
-                var endIndex = str.index(str.startIndex, offsetBy: tailLastNewlineIdx + 1 + numSpaces)
-                var trailingSpaces = StringValue(String(str[startIndex ..< endIndex]))
+                let numSpaces = (str.count - tailLastNewlineIdx) - 1
+                let startIndex = str.index(str.startIndex, offsetBy: tailLastNewlineIdx + 1)
+                let endIndex = str.index(str.startIndex, offsetBy: tailLastNewlineIdx + 1 + numSpaces)
+                let trailingSpaces = StringValue(String(str[startIndex ..< endIndex]))
                 listTexts.append(trailingSpaces)
             }
         }
@@ -678,8 +678,8 @@ public class StoryState {
     
     
     func PushToOutputStreamIndividual(_ obj: Object) {
-        var glue = obj as? Glue
-        var text = obj as? StringValue
+        let glue = obj as? Glue
+        let text = obj as? StringValue
         
         var includeInOutput = true
         
@@ -697,7 +697,7 @@ public class StoryState {
         else if text != nil {
             // Where does the current function call begin?
             var functionTrimIndex = -1
-            var currentEl = callStack.currentElement
+            let currentEl = callStack.currentElement
             if currentEl.type == .Function {
                 functionTrimIndex = currentEl.functionStartInOuputStream
             }
@@ -710,9 +710,9 @@ public class StoryState {
             var glueTrimIndex = -1
             if !outputStream.isEmpty {
                 for i in (0 ... outputStream.count - 1).reversed() {
-                    var o = outputStream[i]
-                    var c = o as? ControlCommand
-                    var g = o as? Glue
+                    let o = outputStream[i]
+                    let c = o as? ControlCommand
+                    let g = o as? Glue
                     
                     // Find latest glue
                     if g != nil {
@@ -759,9 +759,9 @@ public class StoryState {
                     // Tell all functions in callstack that we have seen proper text,
                     // so trimming whitespace at the start is done.
                     if functionTrimIndex > -1 {
-                        var callstackElements = callStack.elements
+                        let callstackElements = callStack.elements
                         for i in (0 ... callstackElements.count - 1).reversed() {
-                            var el = callstackElements[i]
+                            let el = callstackElements[i]
                             if el.type == .Function {
                                 el.functionStartInOuputStream = -1
                             }
@@ -798,9 +798,9 @@ public class StoryState {
         //                        ^--- first while loop stops here
         var i = outputStream.count - 1
         while i >= 0 {
-            var obj = outputStream[i]
-            var cmd = obj as? ControlCommand
-            var txt = obj as? StringValue
+            let obj = outputStream[i]
+            let cmd = obj as? ControlCommand
+            let txt = obj as? StringValue
             
             if cmd != nil || (txt != nil && txt!.isNonWhitespace) {
                 break
@@ -817,7 +817,7 @@ public class StoryState {
         if removeWhitespaceFrom >= 0 {
             i = removeWhitespaceFrom
             while i < outputStream.count {
-                if let text = outputStream[i] as? StringValue{
+                if outputStream[i] as? StringValue != nil {
                     _currentFlow.outputStream.remove(at: i)
                 }
                 else {
@@ -831,7 +831,7 @@ public class StoryState {
     
     func RemoveExistingGlue() {
         for i in (0...outputStream.count - 1).reversed() {
-            var c = outputStream[i]
+            let c = outputStream[i]
             if c is Glue {
                 _currentFlow.outputStream.remove(at: i)
             }
@@ -846,7 +846,7 @@ public class StoryState {
     public var outputStreamEndsInNewLine: Bool {
         if outputStream.count > 0 {
             for i in (0...outputStream.count - 1).reversed() {
-                var obj = outputStream[i]
+                let obj = outputStream[i]
                 
                 if obj is ControlCommand { // e.g. BeginString
                     break
@@ -895,7 +895,7 @@ public class StoryState {
         // with theinteger values etc.
         if let listValue = obj as? ListValue {
             // Update origin when list is has something to indicate the list origin
-            var rawList = listValue.value!
+            let rawList = listValue.value!
             if rawList.originNames != nil {
                 rawList.origins = []
                 
@@ -966,9 +966,9 @@ public class StoryState {
         
         // Trim whitespace from END of function call
         for i in (functionStartPoint ... outputStream.count - 1).reversed() {
-            var obj = outputStream[i]
-            var txt = obj as? StringValue
-            var cmd = obj as? ControlCommand
+            let obj = outputStream[i]
+            let txt = obj as? StringValue
+            let cmd = obj as? ControlCommand
             
             if txt == nil {
                 continue
@@ -1028,7 +1028,7 @@ public class StoryState {
                 throw StoryError.invalidArgument(argName: String(describing: type(of: a)))
             }
             
-            PushEvaluationStack(CreateValue(a)! as! Object)
+            PushEvaluationStack(CreateValue(a)!)
         }
     }
     
@@ -1046,7 +1046,7 @@ public class StoryState {
             throw StoryError.expectedExternalFunctionEvaluationComplete(stackTrace: callStack.callStackTrace)
         }
         
-        var originalEvaluationStackHeight = callStack.currentElement.evaluationStackHeightWhenPushed
+        let originalEvaluationStackHeight = callStack.currentElement.evaluationStackHeightWhenPushed
         
         // Do we have a returned value?
         // Potentially pop multiple values off the stack, in case we need
@@ -1054,7 +1054,7 @@ public class StoryState {
         // have passed too many arguments, and we currently have no way to check for that)
         var returnedObj: Object? = nil
         while evaluationStack.count > originalEvaluationStackHeight {
-            var poppedObj = PopEvaluationStack()
+            let poppedObj = PopEvaluationStack()
             if returnedObj == nil {
                 returnedObj = poppedObj
             }
@@ -1070,7 +1070,7 @@ public class StoryState {
             }
             
             // Some kind of value, if not void
-            var returnVal = returnedObj as! (any BaseValue)
+            let returnVal = returnedObj as! (any BaseValue)
             
             // DivertTargets get returned as the string of components
             // (rather than a Path, which isn't public)

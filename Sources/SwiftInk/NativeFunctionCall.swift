@@ -100,8 +100,8 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
             return try CallBinaryListOperation(parameters) as? Object
         }
         
-        var coercedParams = try CoerceValuesToSingleType(parameters)
-        var coercedType = coercedParams[0].valueType
+        let coercedParams = try CoerceValuesToSingleType(parameters)
+        let coercedType = coercedParams[0].valueType
         
         switch coercedType {
         case .Int:
@@ -123,7 +123,7 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
         let param1 = parametersOfSingleType[0]
         let valType = param1.valueType
         
-        var paramCount = parametersOfSingleType.count
+        let paramCount = parametersOfSingleType.count
         
         if paramCount == 2 || paramCount == 1 {            
             guard let opForTypeObj = _operationFuncs[valType] else {
@@ -133,17 +133,17 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
             // Binary
             if paramCount == 2 {
                 let param2 = parametersOfSingleType[1]
-                var opForType = opForTypeObj as! BinaryOp<T>
+                let opForType = opForTypeObj as! BinaryOp<T>
                 
                 // Return value unknown until it's evaluated
-                var resultVal: Any? = opForType(param1.value as? T, param2.value as? T)
+                let resultVal: Any? = opForType(param1.value as? T, param2.value as? T)
                 return CreateValue(resultVal) as? (any BaseValue)
             }
             
             // Unary
             else {
-                var opForType = opForTypeObj as! UnaryOp<T>
-                var resultVal: Any? = opForType(param1.value as? T)
+                let opForType = opForTypeObj as! UnaryOp<T>
+                let resultVal: Any? = opForType(param1.value as? T)
                 return CreateValue(resultVal) as? (any BaseValue)
             }
         }
@@ -159,11 +159,11 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
             return CallListIncrementOperation(parameters)
         }
         
-        var v1 = parameters[0] as! any BaseValue
-        var v2 = parameters[1] as! any BaseValue
+        let v1 = parameters[0] as! any BaseValue
+        let v2 = parameters[1] as! any BaseValue
         if (name == NativeFunctionCall.And || name == NativeFunctionCall.Or) && (v1.valueType != .List || v2.valueType != .List) {
-            var op = _operationFuncs[.Int] as! BinaryOp<Int>
-            var result = op(v1.isTruthy ? 1 : 0, v2.isTruthy ? 1 : 0) as! Bool
+            let op = _operationFuncs[.Int] as! BinaryOp<Int>
+            let result = op(v1.isTruthy ? 1 : 0, v2.isTruthy ? 1 : 0) as! Bool
             return BoolValue(result)
         }
         
@@ -234,8 +234,8 @@ public class NativeFunctionCall: Object, CustomStringConvertible {
                     parametersOut.append(val)
                 }
                 else if let intValObj = val as? IntValue {
-                    var intVal = intValObj.value!
-                    var list = specialCaseList!.value!.originOfMaxItem
+                    let intVal = intValObj.value!
+                    let list = specialCaseList!.value!.originOfMaxItem
                     if let item = list?.TryGetItemWithValue(intVal) {
                         parametersOut.append(ListValue(item, intVal))
                     }

@@ -19,7 +19,7 @@ public class ListValue: Object, BaseValue {
         }
         
         if newType == .Int {
-            var maxItem = value?.maxItem
+            let maxItem = value?.maxItem
             if maxItem?.key == nil {
                 return IntValue(0)
             }
@@ -29,7 +29,7 @@ public class ListValue: Object, BaseValue {
         }
         
         if newType == .Float {
-            var maxItem = value?.maxItem
+            let maxItem = value?.maxItem
             if maxItem?.key == nil {
                 return FloatValue(0.0)
             }
@@ -39,7 +39,7 @@ public class ListValue: Object, BaseValue {
         }
         
         if newType == .String {
-            var maxItem = value?.maxItem
+            let maxItem = value?.maxItem
             if maxItem?.key == nil {
                 return StringValue("")
             }
@@ -64,8 +64,8 @@ public class ListValue: Object, BaseValue {
     }
     
     public static func RetainListOriginsForAssignment(_ oldValue: Object?, _ newValue: Object?) {
-        var oldList = oldValue as? ListValue
-        var newList = newValue as? ListValue
+        let oldList = oldValue as? ListValue
+        let newList = newValue as? ListValue
         
         if oldList != nil && newList != nil && newList!.value!.count == 0 {
             newList!.value!.SetInitialOriginNames(oldList!.value?.originNames)
