@@ -440,18 +440,15 @@ Neither is this:
             print(try s.Continue().trimmingCharacters(in: ["\n"]))
             if !s.canContinue {
                 if s.currentChoices.count > 0 {
-                    print(s.BuildStringOfHierarchy()) // TODO: Looks like the choice path might be backwards!
-                    try s.ChooseChoiceIndex(0)
-//                    for (i, choice) in s.currentChoices.enumerated() {
-//                        print("\(i): \(choice.text!)")
-//                    }
-//                    var playerChoice: Int? = nil
-//                    while playerChoice == nil {
-//                        playerChoice = Int(readLine() ?? "0")
-//                    }
-//
-//                    try s.ChooseChoiceIndex(playerChoice!)
-                    
+                    for (i, choice) in s.currentChoices.enumerated() {
+                        print("\(i): \(choice.text!)")
+                    }
+                    var playerChoice: Int? = nil
+                    while playerChoice == nil {
+                        playerChoice = Int(readLine() ?? "0")
+                    }
+
+                    try s.ChooseChoiceIndex(playerChoice!)
                 }
                 else {
                     print("STORY DONE")

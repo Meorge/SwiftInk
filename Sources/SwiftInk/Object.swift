@@ -71,6 +71,7 @@ public class Object: Equatable, Hashable {
                     container = container!.parent as? Container
                 }
                 
+                comps.reverse()
                 _path = Path(comps)
             }
         }

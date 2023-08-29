@@ -6,7 +6,7 @@ public class Choice : Object, CustomStringConvertible {
     
     public var pathStringOnChoice: String {
         get {
-            return String(describing: targetPath)
+            return targetPath!.description
         }
         set {
             targetPath = Path(newValue)

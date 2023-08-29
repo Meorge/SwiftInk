@@ -1580,7 +1580,6 @@ public class Story: Object {
         delegate?.onMakeChoice(named: choiceToChoose)
         state.callStack.currentThread = choiceToChoose.threadAtGeneration!
         
-        print(choiceToChoose)
         try ChoosePath(choiceToChoose.targetPath!)
     }
     

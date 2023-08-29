@@ -3,6 +3,7 @@ import Foundation
 public class ChoicePoint: Object, CustomStringConvertible {
     public var pathOnChoice: Path? {
         get {
+            
             // Resolve any relative paths to global ones as we come across them
             if _pathOnChoice != nil && _pathOnChoice!.isRelative {
                 var choiceTargetObj = choiceTarget
@@ -19,7 +20,9 @@ public class ChoicePoint: Object, CustomStringConvertible {
     private var _pathOnChoice: Path?
     
     public var choiceTarget: Container? {
-        ResolvePath(_pathOnChoice!)?.container
+        var thePath = ResolvePath(_pathOnChoice!)
+        var theContainer = thePath?.container
+        return theContainer
     }
     
     public var pathStringOnChoice: String {
