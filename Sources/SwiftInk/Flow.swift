@@ -27,31 +27,29 @@ public class Flow {
         try LoadFlowChoiceThreads(jChoiceThreadsObj, story)
     }
     
-    // TODO: Reimplement for SwiftyJSON
-    public func WriteJson() -> [String: Any?] {
-        fatalError("Reimplement for SwiftyJSON")
-//        var output: [String: Any?] = [
-//            "callstack": callStack?.WriteJson(),
-//            "outputStream": WriteListRuntimeObjs(outputStream),
-//        ]
-//
-//        // choiceThreads: optional
-//        // Has to come BEFORE the choices themselves are written out
-//        // since the originalThreadIndex of each choice needs to be set
-//        var hasChoiceThreads = false
-//        var choiceThreads: [String: Any?] = [:]
-//        for c in currentChoices {
-//            c.originalThreadIndex = c.threadAtGeneration?.threadIndex
-//
-//            if callStack?.ThreadWithIndex(c.originalThreadIndex!) == nil {
-//                choiceThreads[String(c.originalThreadIndex!)] = c.threadAtGeneration?.WriteJson()
-//            }
-//
-//        }
-//
-//        output["currentChoices"] = currentChoices.map { $0.WriteJson() }
-//
-//        return output
+    public func WriteJson() -> JSON {
+        var output: JSON = [
+            "callstack": callStack!.WriteJson(),
+            "outputStream": WriteListRuntimeObjs(outputStream),
+        ]
+
+        // choiceThreads: optional
+        // Has to come BEFORE the choices themselves are written out
+        // since the originalThreadIndex of each choice needs to be set
+        var hasChoiceThreads = false
+        var choiceThreads: JSON = [:]
+        for c in currentChoices {
+            c.originalThreadIndex = c.threadAtGeneration?.threadIndex
+
+            if callStack?.ThreadWithIndex(c.originalThreadIndex!) == nil {
+                choiceThreads[String(c.originalThreadIndex!)] = c.threadAtGeneration!.WriteJson()
+            }
+
+        }
+
+        output["currentChoices"] = JSON(currentChoices.map { $0.WriteJson() })
+
+        return output
     }
     
     // Used both to load old format and current

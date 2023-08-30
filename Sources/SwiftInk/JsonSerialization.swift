@@ -41,7 +41,7 @@ public func WriteListRuntimeObjs(_ list: [Object?]) -> [Any?] {
     list.map { WriteRuntimeObject($0) }
 }
 
-public func WriteRuntimeContainer(_ container: Container, withoutName: Bool = false) -> [Any?] {
+public func WriteRuntimeContainer(_ container: Container, withoutName: Bool = false) -> JSON {
     var output: [Any?] = []
     
     for c in container.content {
@@ -60,7 +60,7 @@ public func WriteRuntimeContainer(_ container: Container, withoutName: Bool = fa
     let hasTerminator = namedOnlyContent != nil || countFlags > 0 || hasNameProperty
     
     if hasTerminator {
-        var terminatorObj: [String: Any?] = [:]
+        var terminatorObj: JSON = [:]
         
         if namedOnlyContent != nil {
             for namedContent in namedOnlyContent! {
@@ -76,10 +76,10 @@ public func WriteRuntimeContainer(_ container: Container, withoutName: Bool = fa
         output.append(nil)
     }
     
-    return output
+    return JSON(output)
 }
 
-public func WriteRuntimeObject(_ obj: Object?) -> Any? {
+public func WriteRuntimeObject(_ obj: Object?) -> JSON {
     if let container = obj as? Container {
         return WriteRuntimeContainer(container)
     }
@@ -106,41 +106,41 @@ public func WriteRuntimeObject(_ obj: Object?) -> Any? {
             targetStr = divert.targetPathString
         }
         
-        var outputObject: [String: Any?] = [:]
-        outputObject[divTypeKey] = targetStr
+        var outputObject = JSON()
+        outputObject[divTypeKey] = JSON(targetStr!)
         
         if divert.hasVariableTarget {
-            outputObject["var"] = true
+            outputObject["var"] = JSON(true)
         }
         
         if divert.isConditional {
-            outputObject["c"] = true
+            outputObject["c"] = JSON(true)
         }
         
         if divert.externalArgs > 0 {
-            outputObject["exArgs"] = divert.externalArgs
+            outputObject["exArgs"] = JSON(divert.externalArgs)
         }
         
         return outputObject
     }
     
     if let choicePoint = obj as? ChoicePoint {
-        var outputObject: [String: Any?] = [:]
-        outputObject["*"] = choicePoint.pathStringOnChoice
-        outputObject["flg"] = choicePoint.flags
+        var outputObject = JSON()
+        outputObject["*"] = JSON(choicePoint.pathStringOnChoice)
+        outputObject["flg"] = JSON(choicePoint.flags)
         return outputObject
     }
     
     if let boolVal = obj as? BoolValue {
-        return boolVal.valueObject
+        return JSON(boolVal.valueObject!)
     }
     
     if let intVal = obj as? IntValue {
-        return intVal.valueObject
+        return JSON(intVal.valueObject!)
     }
     
     if let floatVal = obj as? FloatValue {
-        return floatVal.valueObject
+        return JSON(floatVal.valueObject!)
     }
     
     if let strVal = obj as? StringValue {
@@ -148,7 +148,7 @@ public func WriteRuntimeObject(_ obj: Object?) -> Any? {
             return "\n"
         }
         else {
-            return "^\(strVal.value!)"
+            return JSON("^\(strVal.value!)")
         }
     }
     
@@ -157,19 +157,19 @@ public func WriteRuntimeObject(_ obj: Object?) -> Any? {
     }
     
     if let divTargetVal = obj as? DivertTargetValue {
-        return ["^->": divTargetVal.value?.componentsString]
+        return JSON(["^->": divTargetVal.value?.componentsString])
     }
     
     if let varPtrVal = obj as? VariablePointerValue {
-        return ["^var": varPtrVal.value!, "ci": varPtrVal.contextIndex] as [String : Any]
+        return JSON(["^var": JSON(varPtrVal.value!), "ci": JSON(varPtrVal.contextIndex)])
     }
     
     if obj is Glue {
-        return "<>"
+        return JSON("<>")
     }
     
     if let controlCmd = obj as? ControlCommand {
-        return _controlCommandNames[controlCmd.commandType.rawValue]
+        return JSON(_controlCommandNames[controlCmd.commandType.rawValue]!)
     }
     
     if let nativeFunc = obj as? NativeFunctionCall {
@@ -180,42 +180,42 @@ public func WriteRuntimeObject(_ obj: Object?) -> Any? {
             name = "L^"
         }
         
-        return name
+        return JSON(name)
     }
     
     if let varRef = obj as? VariableReference {
-        var outputObj: [String: Any?] = [:]
+        var outputObj = JSON()
         
         if let readCountPath = varRef.pathStringForCount {
-            outputObj["CNT?"] = readCountPath
+            outputObj["CNT?"] = JSON(readCountPath)
         }
         else {
-            outputObj["VAR?"] = varRef.name
+            outputObj["VAR?"] = JSON(varRef.name!)
         }
         
         return outputObj
     }
     
     if let varAss = obj as? VariableAssignment {
-        var outputObj: [String: Any?] = [:]
+        var outputObj = JSON()
         
         let key = varAss.isGlobal ? "VAR=" : "temp="
-        outputObj[key] = varAss.variableName
+        outputObj[key] = JSON(varAss.variableName!)
         
         // Reassignment?
         if !varAss.isNewDeclaration {
-            outputObj["re"] = true
+            outputObj["re"] = JSON(true)
         }
         
         return outputObj
     }
     
     if obj is Void {
-        return "void"
+        return JSON("void")
     }
     
     if let tag = obj as? Tag {
-        return ["#": tag.text]
+        return JSON(["#": tag.text])
     }
     
     // Used when serializing save state only
@@ -226,30 +226,30 @@ public func WriteRuntimeObject(_ obj: Object?) -> Any? {
     fatalError("Failed to write runtime object to JSON: \(String(describing: obj))")
 }
 
-func WriteInkList(_ listVal: ListValue) -> [String: Any?] {
+func WriteInkList(_ listVal: ListValue) -> JSON {
     let rawList = listVal.value
     
-    var outputObj: [String: Any?] = [:]
+    var outputObj = JSON()
     
-    var listStuff: [String: Any?] = [:]
+    var listStuff = JSON()
     for itemAndValue in rawList!.internalDict {
         let item = itemAndValue.key
         let itemVal = itemAndValue.value
         
-        listStuff["\(item.originName ?? "?").\(item.itemName!)"] = itemVal
+        listStuff["\(item.originName ?? "?").\(item.itemName!)"] = JSON(itemVal)
     }
     
     outputObj["list"] = listStuff
     
     if rawList!.internalDict.isEmpty && rawList?.originNames != nil && !(rawList!.originNames!.isEmpty) {
-        outputObj["origins"] = rawList?.originNames!
+        outputObj["origins"] = JSON(rawList!.originNames!)
     }
     
     return outputObj
 }
 
-func WriteListRuntimeObjs(_ list: [Object]) -> [Any?] {
-    list.map { WriteRuntimeObject($0) }
+func WriteListRuntimeObjs(_ list: [Object]) -> JSON {
+    JSON(list.map { WriteRuntimeObject($0) })
 }
 
 func JTokenToListDefinitions(_ obj: Any?) -> ListDefinitionsOrigin {

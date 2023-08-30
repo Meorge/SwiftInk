@@ -1,4 +1,5 @@
 import Foundation
+import SwiftyJSON
 
 public class VariablesState: Sequence {
     public typealias VariableChanged = (_ variableName: String, _ newValue: Object?) throws -> Swift.Void
@@ -127,19 +128,18 @@ public class VariablesState: Sequence {
         patch = nil
     }
     
-    // TODO: Reimplement for SwiftyJSON
-    public func SetJsonToken(_ jToken: [String: Any?]) throws {
-        fatalError("Reimplement for SwiftyJSON")
-//        _globalVariables.removeAll()
-//
-//        for varVal in _defaultGlobalVariables {
-//            if let loadedToken = jToken[varVal.key] {
-//                _globalVariables[varVal.key] = try JTokenToRuntimeObject(loadedToken)
-//            }
-//            else {
-//                _globalVariables[varVal.key] = varVal.value
-//            }
-//        }
+    public func SetJsonToken(_ jToken: JSON) throws {
+        _globalVariables.removeAll()
+
+        for varVal in _defaultGlobalVariables {
+            let loadedToken = jToken[varVal.key]
+            if loadedToken.exists() {
+                _globalVariables[varVal.key] = try JTokenToRuntimeObject(jsonToken: loadedToken)
+            }
+            else {
+                _globalVariables[varVal.key] = varVal.value
+            }
+        }
     }
     
     /// When saving out JSON state, we can skip saving global values that
@@ -152,7 +152,26 @@ public class VariablesState: Sequence {
     /// save timing.
     public static var dontSaveDefaultValues = true
     
-    // TODO: WriteJson
+    public func WriteJson() throws -> JSON {
+        var obj = JSON()
+        for keyVal in _globalVariables {
+            let name = keyVal.key
+            let val = keyVal.value
+            
+            if VariablesState.dontSaveDefaultValues {
+                // Don't write out values that are the same as the default global values
+                if let defaultVal = _defaultGlobalVariables[name] {
+                    if try RuntimeObjectsEqual(val, defaultVal) {
+                        continue
+                    }
+                }
+            }
+            
+            obj[name] = WriteRuntimeObject(val)
+        }
+        
+        return obj
+    }
     
     public func RuntimeObjectsEqual(_ obj1: Object, _ obj2: Object) throws -> Bool {
         if type(of: obj1) != type(of: obj2) {

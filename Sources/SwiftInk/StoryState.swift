@@ -1,11 +1,5 @@
-//
-//  File.swift
-//  
-//
-//  Created by Malcolm Anderson on 8/18/23.
-//
-
 import Foundation
+import SwiftyJSON
 
 /// Contains all story state information,
 /// including global variables, read counts, the pointer to the current
@@ -25,27 +19,144 @@ public class StoryState {
     /// Callback for when a state is loaded
     public var onDidLoadState: (() -> Void)?
     
-    // TODO: Reimplement for SwiftyJSON
     /// Exports the current state to JSON format, in order to save the game,
     /// and returns it as a string.
     /// - Returns: The save state in JSON format.
-    public func ToJson() -> String {
-        fatalError("Reimplement for SwiftyJSON")
+    public func WriteJson() throws -> JSON {
+        var obj = JSON()
+        
+        // Flows
+        var flowsObj = JSON()
+        
+        // Multi-flow
+        if _namedFlows != nil && !_namedFlows!.isEmpty {
+            for namedFlow in _namedFlows! {
+                flowsObj[namedFlow.key] = namedFlow.value.WriteJson()
+            }
+        }
+        // Single flow
+        // NOTE: In the original C# code, this branch would be executed
+        // when _namedFlows was null. Here it can never be nil, so instead
+        // we're checking if it's empty or not. This might not be the correct
+        // behavior.
+        else
+        {
+            flowsObj[_currentFlow.name!] = _currentFlow.WriteJson()
+        }
+        
+        obj["flows"] = flowsObj
+        
+        
+        obj["currentFlowName"].string = _currentFlow.name!
+        obj["variablesState"] = try variablesState!.WriteJson()
+        obj["evalStack"] = WriteListRuntimeObjs(evaluationStack)
+        
+        if !divertedPointer!.isNull {
+            obj["currentDivertTarget"].string = divertedPointer!.path!.componentsString
+        }
+        
+        obj["visitCounts"] = JSON(_visitCounts)
+        obj["turnIndices"] = JSON(_turnIndices)
+        
+        obj["turnIdx"] = JSON(currentTurnIndex)
+        obj["storySeed"] = JSON(storySeed)
+        obj["previousRandom"] = JSON(previousRandom)
+        
+        obj["inkSaveVersion"] = JSON(kInkSaveStateVersion)
+        obj["inkFormatVersion"] = JSON(Story.inkVersionCurrent)
+        
+        return obj
     }
     
-    // TODO: Reimplement for SwiftyJSON
-    /// Exports the current state to JSON format, in order to save the game, and
-    /// writes it to the provided stream.
-    /// - Parameter stream: The stream to write the JSON string to.
-    public func ToJson(_ stream: Stream) {
-        fatalError("Reimplement for SwiftyJSON")
-    }
-    
-    // TODO: Reimplement for SwiftyJSON
     /// Loads a previously saved state in JSON format.
     /// - Parameter json: The JSON string to load.
-    public func LoadJson(_ json: String) {
-        fatalError("Reimplement for SwiftyJSON")
+    public func LoadJson(_ json: JSON) throws {
+        guard let jSaveVersion = json["inkSaveVersion"].int else {
+            fatalError("ink save format incorrect, can't load")
+        }
+        
+        if jSaveVersion < kMinCompatibleLoadVersion {
+            fatalError("ink save format isn't compatible with the current version (saw '\(jSaveVersion)', but minimum is \(kMinCompatibleLoadVersion)), so can't load.")
+        }
+        
+        // Flows: Always exists in latest format (even if there's just one default)
+        // but this dictionary doesn't exist in prev format
+        if let flowsObjDict = json["flows"].dictionary {
+            // Single default flow
+            if flowsObjDict.count == 1 {
+                _namedFlows = [:]
+            }
+            
+            // Multi-flow, need to create flows dict
+            else if _namedFlows == nil {
+                _namedFlows = [:]
+            }
+            
+            // Multi-flow, already have a flows dict
+            else {
+                _namedFlows!.removeAll()
+            }
+            
+            // Load up each flow (there may only be one)
+            for namedFlowObj in flowsObjDict {
+                let name = namedFlowObj.key
+                let flowObj = namedFlowObj.value.dictionary
+                
+                // Load up this flow using JSON data
+                let flow = try Flow(name, story!, flowObj!)
+                
+                if flowsObjDict.count == 1 {
+                    _currentFlow = try Flow(name, story!, flowObj!)
+                }
+                else {
+                    _namedFlows![name] = flow
+                }
+            }
+            
+            if _namedFlows != nil && _namedFlows!.count > 1 {
+                let currFlowName = json["currentFlowName"].string!
+                _currentFlow = _namedFlows![currFlowName]!
+            }
+        }
+        
+        // Old format: individually load up callstack, output stream, choices in current/default flow
+        else {
+            _namedFlows = nil
+            _currentFlow.name = kDefaultFlowName
+            try _currentFlow.callStack!.SetJsonToken(json["callstackThreads"].dictionaryValue, story!)
+            _currentFlow.outputStream = try JArrayToRuntimeObjList(jsonArray: json["outputStream"].arrayValue)
+            _currentFlow.currentChoices = try JArrayToRuntimeObjList(jsonArray: json["currentChoices"].arrayValue).map { $0 as! Choice }
+            
+            var choiceThreadsObj = json["choiceThreads"].dictionary
+            try _currentFlow.LoadFlowChoiceThreads(choiceThreadsObj!, story!)
+        }
+        
+        OutputStreamDirty()
+        _aliveFlowNamesDirty = true
+        
+        try variablesState?.SetJsonToken(json["variablesState"])
+        variablesState?.callStack = _currentFlow.callStack
+        
+        evaluationStack = try JArrayToRuntimeObjList(jsonArray: json["evalStack"].arrayValue)
+        
+        if let currentDivertTargetPath = json["currentDivertTarget"].string {
+            divertedPointer = try story?.PointerAtPath(Path(currentDivertTargetPath))
+        }
+        
+        _visitCounts = json["visitCounts"].dictionary!.mapValues { $0.intValue }
+        _turnIndices = json["turnIndices"].dictionary!.mapValues { $0.intValue }
+        
+        currentTurnIndex = json["turnIdx"].intValue
+        storySeed = json["storySeed"].intValue
+        
+        // Not optional, but bug in inkjs means it's actually missing in inkjs saves
+        if let previousRandomObj = json["previousRandom"].int {
+            previousRandom = previousRandomObj
+        }
+        else {
+            previousRandom = 0
+        }
+        
     }
     
     /// Gets the visit/read count of a particular `Container` at the given path.
@@ -336,9 +447,11 @@ public class StoryState {
         if _aliveFlowNamesDirty {
             _aliveFlowNames = []
             
-            for flowName in _namedFlows.keys {
-                if flowName != kDefaultFlowName {
-                    _aliveFlowNames.append(flowName)
+            if _namedFlows != nil {
+                for flowName in _namedFlows!.keys {
+                    if flowName != kDefaultFlowName {
+                        _aliveFlowNames.append(flowName)
+                    }
                 }
             }
             
@@ -389,20 +502,20 @@ public class StoryState {
     
     internal func SwitchFlow_Internal(_ flowName: String) {
         _namedFlows = [:]
-        _namedFlows[kDefaultFlowName] = _currentFlow
+        _namedFlows![kDefaultFlowName] = _currentFlow
         
         if flowName == _currentFlow.name {
             return
         }
         
-        var flow = _namedFlows[flowName]
+        var flow = _namedFlows![flowName]
         if flow == nil {
             flow = Flow(flowName, story!)
-            _namedFlows[flowName] = flow
+            _namedFlows![flowName] = flow
             _aliveFlowNamesDirty = true
         }
         
-        _currentFlow = _namedFlows[flowName]!
+        _currentFlow = _namedFlows![flowName]!
         variablesState?.callStack = _currentFlow.callStack
         
         // Cause text to be regenerated from output stream if necessary
@@ -410,7 +523,7 @@ public class StoryState {
     }
     
     internal func SwitchToDefaultFlow_Internal() {
-        if !_namedFlows.isEmpty {
+        if _namedFlows == nil || !_namedFlows!.isEmpty {
             return
         }
         SwitchFlow_Internal(kDefaultFlowName)
@@ -426,7 +539,8 @@ public class StoryState {
             SwitchToDefaultFlow_Internal()
         }
         
-        _namedFlows.removeValue(forKey: flowName)
+        
+        _namedFlows?.removeValue(forKey: flowName)
         _aliveFlowNamesDirty = true
     }
     
@@ -453,10 +567,12 @@ public class StoryState {
         // (Assuming we're in multi-flow mode at all. If we're not then
         // the above copy is simply the default flow copy and we're done)
         copy._namedFlows = [:]
-        for namedFlow in _namedFlows {
-            copy._namedFlows[namedFlow.key] = namedFlow.value
+        if _namedFlows != nil {
+            for namedFlow in _namedFlows! {
+                copy._namedFlows![namedFlow.key] = namedFlow.value
+            }
         }
-        copy._namedFlows[_currentFlow.name!] = copy._currentFlow
+        copy._namedFlows![_currentFlow.name!] = copy._currentFlow
         copy._aliveFlowNamesDirty = true
         
         if hasError {
@@ -530,16 +646,6 @@ public class StoryState {
         else {
             _turnIndices[container.path.description] = newCount
         }
-    }
-    
-    // TODO: Reimplement for SwiftyJSON
-    func WriteJson() {
-        
-    }
-    
-    // TODO: Reimplement for SwiftyJSON
-    func LoadJsonObj() {
-        
     }
     
     public func ResetErrors() {
@@ -1130,7 +1236,7 @@ public class StoryState {
     var _patch: StatePatch?
     
     var _currentFlow: Flow
-    var _namedFlows: [String: Flow] = [:]
+    var _namedFlows: [String: Flow]? = nil
     let kDefaultFlowName = "DEFAULT_FLOW"
     var _aliveFlowNamesDirty = true
 }

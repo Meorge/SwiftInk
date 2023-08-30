@@ -4,7 +4,7 @@ import SwiftyJSON
 public class Story: Object {
     
     /// The current version of the ink story file format.
-    public let inkVersionCurrent = 21
+    public static let inkVersionCurrent = 21
     
     /**
      Version numbers are for engine itself and story file, rather
@@ -155,19 +155,19 @@ public class Story: Object {
             throw StoryError.inkVersionNotFound
         }
         
-        if formatFromFile > inkVersionCurrent {
+        if formatFromFile > Story.inkVersionCurrent {
             throw StoryError.storyInkVersionIsNewer
         }
         else if formatFromFile < inkVersionMinimumCompatible {
             throw StoryError.storyInkVersionTooOld
         }
-        else if formatFromFile != inkVersionCurrent {
+        else if formatFromFile != Story.inkVersionCurrent {
             print("Warning: Version of ink used to build story doesn't match current version of engine. Non-critical, but recommend synchronising.")
         }
         
         let rootToken = rootObject["root"]
         
-        if rootToken == nil {
+        if !rootToken.exists() {
             throw StoryError.rootNodeNotFound
         }
         
@@ -180,29 +180,27 @@ public class Story: Object {
         try ResetState()
     }
     
-    // TODO: Reimplement for SwiftyJSON
-    func ToJson() -> [String: Any?] {
-        fatalError("Reimplement for SwiftyJSON")
-//        var output: [String: Any?] = [:]
-//        output["inkVersion"] = inkVersionCurrent
-//        output["root"] = WriteRuntimeContainer(_mainContentContainer!)
-//
-//        // List definitions
-//        if _listDefinitions != nil {
-//            var listDefs: [String: Any?] = [:]
-//
-//            for def in _listDefinitions!.lists {
-//                var defJson: [String: Any?] = [:]
-//                for itemToVal in def.items {
-//                    var item = itemToVal.key
-//                    var val = itemToVal.value
-//                    defJson[item.itemName!] = val
-//                }
-//                listDefs[def.name] = defJson
-//            }
-//        }
-//
-//        return output
+    func ToJson() -> JSON {
+        var output = JSON()
+        output["inkVersion"] = JSON(Story.inkVersionCurrent)
+        output["root"] = JSON(WriteRuntimeContainer(_mainContentContainer!))
+
+        // List definitions
+        if _listDefinitions != nil {
+            var listDefs = JSON()
+
+            for def in _listDefinitions!.lists {
+                var defJson = JSON()
+                for itemToVal in def.items {
+                    let item = itemToVal.key
+                    let val = itemToVal.value
+                    defJson[item.itemName!] = JSON(val)
+                }
+                listDefs[def.name] = defJson
+            }
+        }
+
+        return output
     }
     
     /// Reset the story back to its initial state as it was when it was first constructed.

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftyJSON
 
 public class Choice : Object, CustomStringConvertible {
     /// The main text to present to the player.
@@ -13,16 +14,14 @@ public class Choice : Object, CustomStringConvertible {
         }
     }
     
-    // TODO: Reimplement for SwiftyJSON
-    public func WriteJson() -> [String: Any?] {
-        fatalError("Reimplement for SwiftyJSON")
-//        [
-//            "text": text,
-//            "index": index,
-//            "originalChoicePath": sourcePath,
-//            "originalThreadIndex": originalThreadIndex,
-//            "targetPath": pathStringOnChoice
-//        ]
+    public func WriteJson() -> JSON {
+        return [
+            "text": text!,
+            "index": index!,
+            "originalChoicePath": sourcePath!,
+            "originalThreadIndex": originalThreadIndex!,
+            "targetPath": pathStringOnChoice
+        ]
     }
     
     /// Get the path to the original choice point - where was this choice defined in the story?
