@@ -109,8 +109,32 @@ public class Profiler {
         
         sb += "TOTAL: \(_rootNode.totalMillisecs)ms"
         
+        // Group step details by type
+        var averageStepTimes = Dictionary(grouping: _stepDetails, by: { $0.type })
+            .mapValues { stepDetails in
+                stepDetails.map { $0.time }.reduce(0.0, +) / Double(stepDetails.count)
+            }
+            .map { ($0.key, $0.value) }
+            .sorted { $0.1 > $1.1 }
+            .map { "\($0.0): \($0.1)ms" }
         
-        // TODO: Complete
+        sb += "AVERAGE STEP TIMES: \(averageStepTimes.joined(separator: ", "))"
+        
+        
+        var stepTimesGrouped2 = Dictionary(grouping: _stepDetails, by: { $0.type })
+        
+        var sortedKvPairs: [(String, Double)] = []
+        for kvPair in stepTimesGrouped2 {
+            let key = "\(kvPair.key) (x\(kvPair.value.count))"
+            let sum = kvPair.value.map { $0.time }.reduce(0.0, +)
+            sortedKvPairs.append((key, sum))
+        }
+        
+        sortedKvPairs.sort { $0.1 > $1.1 }
+        let accumStepTimes = sortedKvPairs.map { "\($0.0): \($0.1)" }
+        
+        sb += "ACCUMULATED STEP TIMES: \(accumStepTimes.joined(separator: ", "))"
+        
         return sb
     }
     
@@ -121,6 +145,11 @@ public class Profiler {
         
         sb += "Step type\tDescription\tPath\tTime\n"
         
+        let fmt = NumberFormatter()
+        fmt.minimumFractionDigits = 8
+        fmt.maximumFractionDigits = 8
+        fmt.numberStyle = .decimal
+        
         for step in _stepDetails {
             sb += "\(step.type)"
             sb += "\t"
@@ -128,7 +157,7 @@ public class Profiler {
             sb += "\t"
             sb += "\(step.obj!.path)"
             sb += "\t"
-            sb += "\(step.time)" // TODO: Foramt "F8"
+            sb += fmt.string(for: step.time)!
             sb += "\n"
         }
         
@@ -149,25 +178,37 @@ public class Profiler {
         watch.elapsedTime * 1000.0
     }
     
-    // TODO: do the formatting stuff!!
+    
     public static func FormatMillisecs(_ num: Double) -> String {
+        let fmt = NumberFormatter()
+        fmt.numberStyle = .decimal
         if num > 5000 {
-            return "\(num / 1000.0) secs"
+            fmt.minimumFractionDigits = 1
+            fmt.maximumFractionDigits = 1
+            return "\(fmt.string(for: num / 1000.0)!) secs"
         }
         else if num > 1000 {
-            return "\(num / 1000.0) secs"
+            fmt.minimumFractionDigits = 2
+            fmt.maximumFractionDigits = 2
+            return "\(fmt.string(for: num / 1000.0)!) secs"
         }
         else if num > 100 {
-            return "\(num) ms"
+            fmt.minimumFractionDigits = 0
+            fmt.maximumFractionDigits = 0
+            return "\(fmt.string(for: num)!) ms"
         }
         else if num > 1 {
-            return "\(num) ms"
+            fmt.minimumFractionDigits = 1
+            fmt.maximumFractionDigits = 1
+            return "\(fmt.string(for: num)!) ms"
         }
         else if num > 0.01 {
-            return "\(num) ms"
+            fmt.minimumFractionDigits = 3
+            fmt.maximumFractionDigits = 3
+            return "\(fmt.string(for: num)!) ms"
         }
         else {
-            return "\(num) ms"
+            return "\(fmt.string(for: num)!) ms"
         }
     }
     

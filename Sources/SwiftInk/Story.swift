@@ -1395,7 +1395,6 @@ public class Story: Object {
                     throw StoryError.expectedListMinAndMaxForListRange
                 }
                 
-                // TODO: FIX THIS!
                 let result = targetList!.value!.ListWithSubrange(min?.valueObject, max?.valueObject)
                 state.PushEvaluationStack(ListValue(result))
                 break

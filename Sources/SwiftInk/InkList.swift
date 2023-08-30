@@ -453,7 +453,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
         }
         
         for kv in lhs.internalDict {
-            // TODO: Does this also need to be checked the other way around?
+            // NOTE: Does this also need to be checked the other way around?
             // (i.e., this just verifies that `rhs` is a subset of `lhs` I think??)
             if !rhs.internalDict.keys.contains(kv.key) {
                 return false
