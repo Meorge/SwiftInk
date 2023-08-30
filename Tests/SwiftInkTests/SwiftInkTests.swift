@@ -47,9 +47,9 @@ final class SwiftInkTests: XCTestCase {
         var choiceNum = 0
         
         while true {
-            output += try s.ContinueMaximally()
+            output += try s.continueMaximally()
             if !s.currentChoices.isEmpty {
-                try s.ChooseChoiceIndex(choices[choiceNum])
+                try s.chooseChoice(atIndex: choices[choiceNum])
                 choiceNum += 1
             }
             else {

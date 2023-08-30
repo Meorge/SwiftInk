@@ -56,7 +56,7 @@ public class CallStack {
                 if let currentContainerPathStrToken = jElementObj["cPath"]?.object {
                     currentContainerPathStr = String(describing: currentContainerPathStrToken)
                     
-                    let threadPointerResult = storyContext.ContentAtPath(Path(currentContainerPathStr!))
+                    let threadPointerResult = storyContext.contentAtPath(Path(currentContainerPathStr!))
                     pointer.container = threadPointerResult!.container
                     pointer.index = jElementObj["idx"]!.intValue
                     
@@ -64,7 +64,7 @@ public class CallStack {
                         throw StoryError.exactInternalStoryLocationNotFound(pathStr: currentContainerPathStr ?? "nil")
                     }
                     else if threadPointerResult!.approximate {
-                        storyContext.Warning("When loading state, exact internal story location couldn't be found: '\(currentContainerPathStr!)', so it was approximated to '\(pointer.container!.path)' to recover. Has the story changed since this save data was created?")
+                        storyContext.warning("When loading state, exact internal story location couldn't be found: '\(currentContainerPathStr!)', so it was approximated to '\(pointer.container!.path)' to recover. Has the story changed since this save data was created?")
                     }
                 }
                 
@@ -84,7 +84,7 @@ public class CallStack {
             
             if let prevContentObjPath = jThreadObj["previousContentObject"] {
                 let prevPath = Path(String(describing: prevContentObjPath))
-                previousPointer = try storyContext.PointerAtPath(prevPath)
+                previousPointer = try storyContext.pointer(at: prevPath)
             }
         }
         

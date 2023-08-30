@@ -140,7 +140,7 @@ public class StoryState {
         evaluationStack = try JArrayToRuntimeObjList(jsonArray: json["evalStack"].arrayValue)
         
         if let currentDivertTargetPath = json["currentDivertTarget"].string {
-            divertedPointer = try story?.PointerAtPath(Path(currentDivertTargetPath))
+            divertedPointer = try story?.pointer(at: Path(currentDivertTargetPath))
         }
         
         _visitCounts = json["visitCounts"].dictionary!.mapValues { $0.intValue }
@@ -170,7 +170,7 @@ public class StoryState {
     /// - Returns: The number of times the specific knot or stitch has been encountered by the ink engine.
     public func VisitCountAtPathString(_ pathString: String) throws -> Int {
         if _patch != nil {
-            guard let container = story!.ContentAtPath(Path(pathString))?.container else {
+            guard let container = story!.contentAtPath(Path(pathString))?.container else {
                 throw StoryError.contentAtPathNotFound(path: pathString)
             }
             
@@ -188,7 +188,7 @@ public class StoryState {
     
     public func VisitCountForContainer(_ container: Container) throws -> Int {
         if !container.visitsShouldBeCounted {
-            try story?.Error("Read count for target (\(container.name!) - on \(container.debugMetadata!)) unknown")
+            try story?.error("Read count for target (\(container.name!) - on \(container.debugMetadata!)) unknown")
             return 0
         }
         
@@ -224,7 +224,7 @@ public class StoryState {
     
     public func TurnsSinceForContainer(_ container: Container) throws -> Int {
         if !container.turnIndexShouldBeCounted {
-            try story?.Error("TURNS_SINCE() for target (\(container.name!) - on \(container.debugMetadata!)) unknown.")
+            try story?.error("TURNS_SINCE() for target (\(container.name!) - on \(container.debugMetadata!)) unknown.")
         }
         
         if let index = _patch?.turnIndices[container] {
@@ -1108,7 +1108,7 @@ public class StoryState {
         // Changing direction, assume we need to clear current set of choices
         _currentFlow.currentChoices = []
         
-        var newPointer = try story!.PointerAtPath(path)
+        var newPointer = try story!.pointer(at: path)
         if !newPointer.isNull && newPointer.index == -1 {
             newPointer.index = 0
         }

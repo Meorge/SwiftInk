@@ -51,11 +51,15 @@ Ink runtime engine:
 - ✅ `VariablesState`
 - ✅ `Void`
 
-
 ## Documentation
 Until a first version is complete, the code for SwiftInk will follow the C# engine
 very closely. This means that the official [Running Your Ink](https://github.com/inkle/ink/blob/master/Documentation/RunningYourInk.md)
 documentation from inkle should be easily translatable into SwiftInk's API.
 
+### Differences from C# version
+To fit Swift language conventions, SwiftInk uses `pascalCase` for method names and
+enumeration cases instead of `CamelCase` as C# does.
+ 
+ 
 ## License
 Like the original ink engine, SwiftInk is available under the [MIT License](LICENSE.md).
