@@ -32,11 +32,11 @@ public class VariablesState: Sequence {
         _batchObservingVariableChanges
     }
     
-    public func StartBatchObservingVariableChanges() {
+    public func startBatchObservingVariableChanges() {
         _changedVariablesForBatchObs = Set<String>()
     }
     
-    public func StopBatchObservingVariableChanges() throws {
+    public func stopBatchObservingVariableChanges() throws {
         _batchObservingVariableChanges = false
         if _changedVariablesForBatchObs != nil {
             for variableName in _changedVariablesForBatchObs! {
@@ -80,12 +80,12 @@ public class VariablesState: Sequence {
         }
     }
     
-    public func SetGlobalVariable(_ variableName: String, _ newValue: Any?) throws {
+    public func setGlobalVariable(named variableName: String, to newValue: Any?) throws {
         if !_defaultGlobalVariables.keys.contains(variableName) {
             throw StoryError.cannotAssignToUndeclaredVariable(name: variableName)
         }
         
-        let val = CreateValue(newValue)
+        let val = createValue(fromAny: newValue)
         if val == nil {
             if newValue == nil {
                 throw StoryError.cannotPassNilToVariableState
@@ -96,7 +96,7 @@ public class VariablesState: Sequence {
             
         }
         
-        SetGlobal(variableName, val!)
+        setGlobal(named: variableName, to: val!)
     }
     
     /// Iterator to allow iteration over all global variables by name.
@@ -104,13 +104,13 @@ public class VariablesState: Sequence {
         return _globalVariables.keys.makeIterator()
     }
     
-    public init(_ callStack: CallStack, _ listDefsOrigin: ListDefinitionsOrigin) {
+    public init(withCallstack callStack: CallStack, listDefsOrigin: ListDefinitionsOrigin) {
         _globalVariables = [:]
         _callStack = callStack
         _listDefsOrigin = listDefsOrigin
     }
     
-    public func ApplyPatch() {
+    public func applyPatch() {
         if patch == nil {
             return
         }
@@ -128,13 +128,13 @@ public class VariablesState: Sequence {
         patch = nil
     }
     
-    public func SetJsonToken(_ jToken: JSON) throws {
+    public func setJSONToken(_ jToken: JSON) throws {
         _globalVariables.removeAll()
 
         for varVal in _defaultGlobalVariables {
             let loadedToken = jToken[varVal.key]
             if loadedToken.exists() {
-                _globalVariables[varVal.key] = try JTokenToRuntimeObject(jsonToken: loadedToken)
+                _globalVariables[varVal.key] = try jsonTokenToRuntimeObject(jsonToken: loadedToken)
             }
             else {
                 _globalVariables[varVal.key] = varVal.value
@@ -152,7 +152,7 @@ public class VariablesState: Sequence {
     /// save timing.
     public static var dontSaveDefaultValues = true
     
-    public func WriteJson() throws -> JSON {
+    public func writeJSON() throws -> JSON {
         var obj = JSON()
         for keyVal in _globalVariables {
             let name = keyVal.key
@@ -161,19 +161,19 @@ public class VariablesState: Sequence {
             if VariablesState.dontSaveDefaultValues {
                 // Don't write out values that are the same as the default global values
                 if let defaultVal = _defaultGlobalVariables[name] {
-                    if try RuntimeObjectsEqual(val, defaultVal) {
+                    if try runtimeObjectsEqual(val, defaultVal) {
                         continue
                     }
                 }
             }
             
-            obj[name] = WriteRuntimeObject(val)
+            obj[name] = writeRuntimeObject(val)
         }
         
         return obj
     }
     
-    public func RuntimeObjectsEqual(_ obj1: Object, _ obj2: Object) throws -> Bool {
+    public func runtimeObjectsEqual(_ obj1: Object, _ obj2: Object) throws -> Bool {
         if type(of: obj1) != type(of: obj2) {
             return false
         }
@@ -207,26 +207,26 @@ public class VariablesState: Sequence {
         throw StoryError.unsupportedRuntimeObjectType(valType: String(describing: type(of: obj1)))
     }
     
-    public func GetVariableWithName(_ name: String?) -> Object? {
-        GetVariableWithName(name!, -1)
+    public func getVariable(named name: String?) -> Object? {
+        getVariable(named: name!, withContextIndex: -1)
     }
     
-    public func GlobalVariableExistsWithName(_ name: String) -> Bool {
+    public func globalVariableExists(named name: String) -> Bool {
         return _globalVariables.keys.contains(name) || _defaultGlobalVariables.keys.contains(name)
     }
     
-    func GetVariableWithName(_ name: String, _ contextIndex: Int) -> Object? {
-        var varValue = GetRawVariableWithName(name, contextIndex)
+    func getVariable(named name: String, withContextIndex contextIndex: Int) -> Object? {
+        var varValue = getRawVariable(named: name, withContextIndex: contextIndex)
         
         // Get value from pointer?
         if let varPointer = varValue as? VariablePointerValue {
-            varValue = ValueAtVariablePointer(varPointer)
+            varValue = value(atVariablePointer: varPointer)
         }
         
         return varValue
     }
     
-    func GetRawVariableWithName(_ name: String?, _ contextIndex: Int) -> Object? {
+    func getRawVariable(named name: String?, withContextIndex contextIndex: Int) -> Object? {
         // I added this just in case, seems like it would make sense. -- Malcolm
         if name == nil {
             return nil
@@ -251,32 +251,32 @@ public class VariablesState: Sequence {
                 return varValue
             }
             
-            if let listItemValue = _listDefsOrigin?.FindSingleItemListWithName(name!) {
+            if let listItemValue = _listDefsOrigin?.findSingleItemList(withName: name!) {
                 return listItemValue
             }
             
         }
         
         // Temporary
-        return _callStack?.GetTemporaryVariableWithName(name!, contextIndex)
+        return _callStack?.temporaryVariable(named: name!, atContextIndex: contextIndex)
     }
     
-    public func ValueAtVariablePointer(_ pointer: VariablePointerValue) -> Object? {
-        return GetVariableWithName(pointer.variableName, pointer.contextIndex)
+    public func value(atVariablePointer pointer: VariablePointerValue) -> Object? {
+        return getVariable(named: pointer.variableName, withContextIndex: pointer.contextIndex)
     }
     
-    public func Assign(_ varAss: VariableAssignment, _ value: Object?) {
+    public func assign(_ varAss: VariableAssignment, value: Object?) {
         var finalValue = value
         var name = varAss.variableName
         var contextIndex = -1
         
         // Are we assigning to a global variable?
-        var setGlobal = varAss.isNewDeclaration ? varAss.isGlobal : GlobalVariableExistsWithName(name!)
+        var shouldSetGlobal = varAss.isNewDeclaration ? varAss.isGlobal : globalVariableExists(named: name!)
         
         // Constructing new variable pointer reference
         if varAss.isNewDeclaration {
             if let varPointer = finalValue as? VariablePointerValue {
-                finalValue = ResolveVariablePointer(varPointer)
+                finalValue = resolveVariablePointer(varPointer)
                 
             }
         }
@@ -287,36 +287,36 @@ public class VariablesState: Sequence {
             // Dereference variable reference to point to
             var existingPointer: VariablePointerValue? = nil
             repeat {
-                existingPointer = GetRawVariableWithName(name!, contextIndex) as? VariablePointerValue
+                existingPointer = getRawVariable(named: name!, withContextIndex: contextIndex) as? VariablePointerValue
                 if existingPointer != nil {
                     name = existingPointer!.variableName
                     contextIndex = existingPointer!.contextIndex
-                    setGlobal = (contextIndex == 0)
+                    shouldSetGlobal = (contextIndex == 0)
                 }
             } while existingPointer != nil
         }
         
-        if setGlobal {
-            SetGlobal(name!, value!)
+        if shouldSetGlobal {
+            setGlobal(named: name!, to: value!)
         }
         else {
-            _callStack!.SetTemporaryVariable(name!, value, varAss.isNewDeclaration, contextIndex)
+            _callStack!.setTemporaryVariable(named: name!, to: value, varAss.isNewDeclaration, withContextIndex: contextIndex)
         }
     }
     
-    public func SnapshotDefaultGlobals() {
+    public func snapshotDefaultGlobals() {
         _defaultGlobalVariables = _globalVariables
     }
     
-    func RetainListOriginsForAssignment(_ oldValue: Object?, _ newValue: Object?) {
+    func retainListOriginsForAssignment(old oldValue: Object?, new newValue: Object?) {
         let oldList = oldValue as? ListValue
         let newList = newValue as? ListValue
         if oldList != nil && newList != nil && newList!.value!.count == 0 {
-            newList!.value?.SetInitialOriginNames(oldList!.value!.originNames)
+            newList!.value?.setInitialOriginNames(oldList!.value!.originNames)
         }
     }
     
-    public func SetGlobal(_ variableName: String, _ value: Object) {
+    public func setGlobal(named variableName: String, to value: Object) {
         var oldValue: Object? = nil
         if let valueFromPatch = patch?.globals[variableName] {
             oldValue = valueFromPatch
@@ -325,10 +325,10 @@ public class VariablesState: Sequence {
             oldValue = valueFromGlobals
         }
         
-        ListValue.RetainListOriginsForAssignment(oldValue!, value)
+        ListValue.retainListOriginsForAssignment(old: oldValue!, new: value)
         
         if patch != nil {
-            patch!.SetGlobal(variableName, value)
+            patch!.setGlobal(named: variableName, to: value)
         }
         else {
             _globalVariables[variableName] = value
@@ -342,14 +342,14 @@ public class VariablesState: Sequence {
     // Given a variable pointer with just the name of the target known, resolve to a variable
     // pointer that more specifically points to the exact instance: whether it's global,
     // or the exact position of a temporary on the callstack.
-    func ResolveVariablePointer(_ varPointer: VariablePointerValue) -> VariablePointerValue {
+    func resolveVariablePointer(_ varPointer: VariablePointerValue) -> VariablePointerValue {
         var contextIndex = varPointer.contextIndex
         
         if contextIndex == -1 {
-            contextIndex = GetContextIndexOfVariableNamed(varPointer.variableName)
+            contextIndex = getContextIndexOfVariable(named: varPointer.variableName)
         }
         
-        let valueOfVariablePointedTo = GetRawVariableWithName(varPointer.variableName, contextIndex)
+        let valueOfVariablePointedTo = getRawVariable(named: varPointer.variableName, withContextIndex: contextIndex)
         
         // Extra layer of indirection:
         // When accessing a pointer to a pointer (e.g. when calling nested or
@@ -368,8 +368,8 @@ public class VariablesState: Sequence {
     
     // 0 if named variable is global
     // 1+ if named variable is a temporary in a particular call stack element
-    func GetContextIndexOfVariableNamed(_ varName: String) -> Int {
-        if GlobalVariableExistsWithName(varName) {
+    func getContextIndexOfVariable(named varName: String) -> Int {
+        if globalVariableExists(named: varName) {
             return 0
         }
         

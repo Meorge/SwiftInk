@@ -4,7 +4,7 @@ public class Divert: Object, CustomStringConvertible {
     public var targetPath: Path? {
         get {
             if _targetPath != nil && _targetPath!.isRelative {
-                let targetObj = targetPointer!.Resolve()
+                let targetObj = targetPointer!.resolve()
                 if targetObj != nil {
                     _targetPath = targetObj!.path
                 }
@@ -13,7 +13,7 @@ public class Divert: Object, CustomStringConvertible {
         }
         set {
             _targetPath = newValue
-            _targetPointer = Pointer.Null
+            _targetPointer = Pointer.null
         }
     }
     var _targetPath: Path?
@@ -21,14 +21,14 @@ public class Divert: Object, CustomStringConvertible {
     public var targetPointer: Pointer? {
         get {
             if _targetPointer == nil || _targetPointer!.isNull {
-                let targetObj = ResolvePath(_targetPath!)?.obj
+                let targetObj = resolve(path: _targetPath!)?.obj
                 
                 if (_targetPath?.lastComponent?.isIndex ?? false) {
                     _targetPointer?.container = targetObj?.parent as? Container
                     _targetPointer?.index = (_targetPath?.lastComponent!.index)!
                 }
                 else {
-                    _targetPointer = Pointer.StartOf(targetObj as? Container)
+                    _targetPointer = Pointer.startOf(container: targetObj as? Container)
                 }
             }
             return _targetPointer
@@ -43,14 +43,14 @@ public class Divert: Object, CustomStringConvertible {
                 return nil
             }
             
-            return CompactPathString(targetPath!)
+            return compactString(forPath: targetPath!)
         }
         set {
             if newValue == nil {
                 targetPath = nil
             }
             else {
-                targetPath = Path(newValue!)
+                targetPath = Path(fromComponentsString: newValue!)
             }
         }
     }
@@ -114,7 +114,7 @@ public class Divert: Object, CustomStringConvertible {
         
         var sb = ""
         var targetStr = String(describing: targetPath!)
-        let targetLineNum = DebugLineNumberOfPath(path: targetPath)
+        let targetLineNum = debugLineNumber(ofPath: targetPath)
         if targetLineNum != nil {
             targetStr = "line \(targetLineNum!) "
         }
@@ -126,7 +126,7 @@ public class Divert: Object, CustomStringConvertible {
         }
         
         if pushesToStack {
-            if stackPushType! == .Function {
+            if stackPushType! == .function {
                 sb += " function"
             }
             else {

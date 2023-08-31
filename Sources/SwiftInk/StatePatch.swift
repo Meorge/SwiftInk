@@ -17,7 +17,7 @@ public class StatePatch {
         _turnIndices
     }
     
-    public init(_ toCopy: StatePatch?) {
+    public init(copying toCopy: StatePatch?) {
         if toCopy != nil {
             _globals = toCopy!._globals
             _changedVariables = toCopy!._changedVariables
@@ -32,7 +32,7 @@ public class StatePatch {
         }
     }
     
-    public func SetGlobal(_ name: String, _ value: Object) {
+    public func setGlobal(named name: String, to value: Object) {
         _globals[name] = value
     }
     

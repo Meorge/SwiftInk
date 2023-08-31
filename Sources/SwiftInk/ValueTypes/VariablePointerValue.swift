@@ -2,14 +2,14 @@ import Foundation
 
 public class VariablePointerValue: Object, BaseValue, CustomStringConvertible {
     public var valueType: ValueType {
-        .VariablePointer
+        .variablePointer
     }
     
     public var isTruthy: Bool {
         fatalError("Shouldn't be checking the truthiness of a variable pointer")
     }
     
-    public func Cast(_ newType: ValueType) throws -> (any BaseValue)? {
+    public func cast(to newType: ValueType) throws -> (any BaseValue)? {
         if newType == valueType {
             return self
         }

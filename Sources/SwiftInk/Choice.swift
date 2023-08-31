@@ -10,11 +10,11 @@ public class Choice : Object, CustomStringConvertible {
             return targetPath!.description
         }
         set {
-            targetPath = Path(newValue)
+            targetPath = Path(fromComponentsString: newValue)
         }
     }
     
-    public func WriteJson() -> JSON {
+    public func writeJSON() -> JSON {
         return [
             "text": text!,
             "index": index!,

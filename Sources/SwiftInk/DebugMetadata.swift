@@ -12,7 +12,7 @@ public class DebugMetadata: CustomStringConvertible {
         
     }
     
-    public func Merge(_ dm: DebugMetadata) -> DebugMetadata {
+    public func merge(with dm: DebugMetadata) -> DebugMetadata {
         let newDebugMetadata = DebugMetadata()
         
         // These are not supposed to differ between 'self' and 'dm'

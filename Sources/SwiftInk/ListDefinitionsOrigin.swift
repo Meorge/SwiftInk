@@ -31,11 +31,11 @@ public class ListDefinitionsOrigin {
         }
     }
     
-    public func TryListGetDefinition(_ name: String) -> ListDefinition? {
+    public func tryListGetDefinition(forName name: String) -> ListDefinition? {
         _lists[name]
     }
     
-    public func FindSingleItemListWithName(_ name: String) -> ListValue? {
+    public func findSingleItemList(withName name: String) -> ListValue? {
         _allUnambiguousListValueCache[name]
     }
     

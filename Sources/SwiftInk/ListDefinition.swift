@@ -21,11 +21,11 @@ public class ListDefinition: Equatable {
     }
     private var _items: [InkListItem: Int] = [:]
     
-    public func ValueForItem(_ item: InkListItem) -> Int {
+    public func value(forItem item: InkListItem) -> Int {
         return _itemNameToValues[item.itemName!] ?? 0
     }
     
-    public func ContainsItem(_ item: InkListItem) -> Bool {
+    public func contains(_ item: InkListItem) -> Bool {
         if item.originName != name {
             return false
         }
@@ -33,11 +33,11 @@ public class ListDefinition: Equatable {
         return _itemNameToValues.keys.contains(item.itemName!)
     }
     
-    public func ContainsItemWithName(_ itemName: String) -> Bool {
+    public func contains(named itemName: String) -> Bool {
         return _itemNameToValues.keys.contains(itemName)
     }
     
-    public func TryGetItemWithValue(_ val: Int) -> InkListItem? {
+    public func tryGetItem(withValue val: Int) -> InkListItem? {
         for namedItem in _itemNameToValues {
             if namedItem.value == val {
                 return InkListItem(name, namedItem.key)
@@ -46,11 +46,11 @@ public class ListDefinition: Equatable {
         return nil
     }
     
-    public func TryGetValueForItem(_ item: InkListItem) -> Int? {
+    public func tryGetValue(forItem item: InkListItem) -> Int? {
         return _itemNameToValues[item.itemName!]
     }
     
-    public init(_ name: String, _ items: [String: Int]) {
+    public init(named name: String, withItems items: [String: Int]) {
         self.name = name
         _itemNameToValues = items
     }

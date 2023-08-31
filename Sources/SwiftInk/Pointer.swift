@@ -4,12 +4,12 @@ public struct Pointer: CustomStringConvertible {
     public var container: Container?
     public var index: Int
     
-    public init(_ container: Container?, _ index: Int) {
+    public init(forContainer container: Container?, atIndex index: Int) {
         self.container = container
         self.index = index
     }
     
-    public func Resolve() -> Object? {
+    public func resolve() -> Object? {
         if index < 0 {
             return container
         }
@@ -35,7 +35,7 @@ public struct Pointer: CustomStringConvertible {
         }
         
         if index >= 0 {
-            return container!.path.PathByAppendingComponent(Path.Component(index))
+            return container!.path.path(byAppendingComponent: Path.Component(index))
         }
         else {
             return container!.path
@@ -50,9 +50,9 @@ public struct Pointer: CustomStringConvertible {
         return "Ink Pointer -> \(container!.path) -- index \(index)"
     }
     
-    public static func StartOf(_ container: Container?) -> Pointer {
-        return Pointer(container, 0)
+    public static func startOf(container: Container?) -> Pointer {
+        return Pointer(forContainer: container, atIndex: 0)
     }
     
-    public static let Null = Pointer(nil, -1)
+    public static let null = Pointer(forContainer: nil, atIndex: -1)
 }

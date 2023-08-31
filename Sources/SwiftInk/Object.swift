@@ -26,14 +26,14 @@ public class Object: Equatable, Hashable {
         return _debugMetadata
     }
     
-    public func DebugLineNumberOfPath(path: Path?) -> Int? {
+    public func debugLineNumber(ofPath path: Path?) -> Int? {
         if path == nil {
             return nil
         }
         
         let root = self.rootContentContainer
         if root != nil {
-            let targetContent = root!.ContentAtPath(path!).obj
+            let targetContent = root!.content(atPath: path!).obj
             if targetContent != nil {
                 let dm = targetContent!.debugMetadata
                 if dm != nil {
@@ -72,13 +72,13 @@ public class Object: Equatable, Hashable {
                 }
                 
                 comps.reverse()
-                _path = Path(comps)
+                _path = Path(withComponents: comps)
             }
         }
         return _path!
     }
     
-    public func ResolvePath(_ path: Path) -> SearchResult? {
+    public func resolve(path: Path) -> SearchResult? {
         var _path = path
         if _path.isRelative {
             var nearestContainer = self as? Container
@@ -86,18 +86,18 @@ public class Object: Equatable, Hashable {
                 assert(parent != nil, "Can't resolve relative path because we don't have a parent")
                 nearestContainer = parent as? Container
                 assert(nearestContainer != nil, "Expected parent to be a container")
-                assert(path.GetComponent(0).isParent)
+                assert(path.getComponent(atIndex: 0).isParent)
                 _path = _path.tail!
             }
             
-            return nearestContainer?.ContentAtPath(_path)
+            return nearestContainer?.content(atPath: _path)
         }
         else {
-            return rootContentContainer?.ContentAtPath(_path)
+            return rootContentContainer?.content(atPath: _path)
         }
     }
     
-    public func ConvertPathToRelative(_ globalPath: Path) -> Path? {
+    public func convertPathToRelative(globalPath: Path) -> Path? {
         // 1. Find last shared ancestor
         // 2. Drill up using ".." style (actually represented as "^")
         // 3. Re-build downward chain from common ancestor
@@ -108,8 +108,8 @@ public class Object: Equatable, Hashable {
         var lastSharedPathCompIndex = -1
         
         for i in 0 ..< minPathLength {
-            let ownComp = ownPath.GetComponent(i)
-            let otherComp = globalPath.GetComponent(i)
+            let ownComp = ownPath.getComponent(atIndex: i)
+            let otherComp = globalPath.getComponent(atIndex: i)
             
             if ownComp == otherComp {
                 lastSharedPathCompIndex = i
@@ -129,27 +129,27 @@ public class Object: Equatable, Hashable {
         var newPathComps: [Path.Component] = []
         
         for _ in 0 ..< numUpwardsMoves {
-            newPathComps.append(Path.Component.ToParent())
+            newPathComps.append(Path.Component.toParent())
         }
         
         for down in (lastSharedPathCompIndex + 1) ..< globalPath.length {
-            newPathComps.append(globalPath.GetComponent(down))
+            newPathComps.append(globalPath.getComponent(atIndex: down))
         }
         
-        let relativePath = Path(newPathComps, true)
+        let relativePath = Path(withComponents: newPathComps, isRelative: true)
         return relativePath
     }
     
-    public func CompactPathString(_ otherPath: Path) -> String {
+    public func compactString(forPath otherPath: Path) -> String {
         var globalPathStr: String? = nil
         var relativePathStr: String? = nil
         
         if otherPath.isRelative {
             relativePathStr = otherPath.componentsString
-            globalPathStr = path.PathByAppendingPath(otherPath).componentsString
+            globalPathStr = path.path(byAppendingPath: otherPath).componentsString
         }
         else {
-            let relativePath = ConvertPathToRelative(otherPath)
+            let relativePath = convertPathToRelative(globalPath: otherPath)
             relativePathStr = relativePath?.componentsString
             globalPathStr = otherPath.componentsString
         }
@@ -174,7 +174,7 @@ public class Object: Equatable, Hashable {
         
     }
     
-    public func SetChild<T: Object>(_ obj: inout T?, _ value: T?) {
+    public func setChild<T: Object>(_ obj: inout T?, _ value: T?) {
         if obj != nil {
             obj!.parent = nil
         }

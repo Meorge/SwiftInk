@@ -6,14 +6,14 @@ public class VariableAssignment: Object, CustomStringConvertible {
     var isNewDeclaration: Bool
     public var isGlobal: Bool = false
     
-    public init(_ variableName: String?, _ isNewDeclaration: Bool) {
+    public init(forVariableNamed variableName: String?, isNewDeclaration: Bool) {
         self.variableName = variableName
         self.isNewDeclaration = isNewDeclaration
     }
     
     // Require default constructor for serialisation
     public convenience override init() {
-        self.init(nil, false)
+        self.init(forVariableNamed: nil, isNewDeclaration: false)
     }
     
     public var description: String {

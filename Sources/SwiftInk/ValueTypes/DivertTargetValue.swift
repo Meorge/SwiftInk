@@ -6,7 +6,7 @@ public class DivertTargetValue: Object, BaseValue {
     public typealias T = Path
     
     public var valueType: ValueType {
-        .DivertTarget
+        .divertTarget
     }
     
     public var isTruthy: Bool {
@@ -31,7 +31,7 @@ public class DivertTargetValue: Object, BaseValue {
         self.init(nil)
     }
     
-    public func Cast(_ newType: ValueType) throws -> (any BaseValue)? {
+    public func cast(to newType: ValueType) throws -> (any BaseValue)? {
         if newType == valueType {
             return self
         }

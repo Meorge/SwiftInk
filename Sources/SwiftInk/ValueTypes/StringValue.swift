@@ -10,7 +10,7 @@ public class StringValue: Object, BaseValue {
     public typealias T = String
     
     public var valueType: ValueType {
-        .String
+        .string
     }
     
     private(set) var isNewline: Bool
@@ -36,14 +36,14 @@ public class StringValue: Object, BaseValue {
         self.init("")
     }
     
-    public func Cast(_ newType: ValueType) throws -> (any BaseValue)? {
+    public func cast(to newType: ValueType) throws -> (any BaseValue)? {
         if newType == valueType {
             return self
         }
         
         // NOTE: no casting to bool??
         
-        if newType == .Int {
+        if newType == .int {
             if let parsedInt = Int(value!) {
                 return IntValue(parsedInt)
             }
@@ -52,7 +52,7 @@ public class StringValue: Object, BaseValue {
             }
         }
         
-        if newType == .Float {
+        if newType == .float {
             if let parsedFloat = Float(value!) {
                 return FloatValue(parsedFloat)
             }

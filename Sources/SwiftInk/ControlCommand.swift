@@ -44,7 +44,7 @@ public class ControlCommand: Object, CustomStringConvertible {
         self.init(.notSet)
     }
     
-    public func Copy() -> ControlCommand {
+    public func copy() -> ControlCommand {
         return ControlCommand(commandType)
     }
     

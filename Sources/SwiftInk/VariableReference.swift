@@ -11,7 +11,7 @@ public class VariableReference: Object {
         guard pathForCount != nil else {
             return nil
         }
-        return ResolvePath(pathForCount!)?.container
+        return resolve(path: pathForCount!)?.container
     }
     
     public var pathStringForCount: String? {
@@ -19,19 +19,19 @@ public class VariableReference: Object {
             if pathForCount == nil {
                 return nil
             }
-            return CompactPathString(pathForCount!)
+            return compactString(forPath: pathForCount!)
         }
         set {
             if newValue == nil {
                 pathForCount = nil
             }
             else {
-                pathForCount = Path(newValue!)
+                pathForCount = Path(fromComponentsString: newValue!)
             }
         }
     }
     
-    public init(_ name: String?) {
+    public init(forVariableNamed name: String?) {
         self.name = name
     }
     

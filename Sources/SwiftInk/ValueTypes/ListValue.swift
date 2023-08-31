@@ -6,19 +6,19 @@ public class ListValue: Object, BaseValue {
     public typealias T = InkList
     
     public var valueType: ValueType {
-        .List
+        .list
     }
     
     public var isTruthy: Bool {
         value!.count > 0
     }
     
-    public func Cast(_ newType: ValueType) throws -> (any BaseValue)? {
+    public func cast(to newType: ValueType) throws -> (any BaseValue)? {
         if newType == valueType {
             return self
         }
         
-        if newType == .Int {
+        if newType == .int {
             let maxItem = value?.maxItem
             if maxItem?.key == nil {
                 return IntValue(0)
@@ -28,7 +28,7 @@ public class ListValue: Object, BaseValue {
             }
         }
         
-        if newType == .Float {
+        if newType == .float {
             let maxItem = value?.maxItem
             if maxItem?.key == nil {
                 return FloatValue(0.0)
@@ -38,7 +38,7 @@ public class ListValue: Object, BaseValue {
             }
         }
         
-        if newType == .String {
+        if newType == .string {
             let maxItem = value?.maxItem
             if maxItem?.key == nil {
                 return StringValue("")
@@ -63,12 +63,12 @@ public class ListValue: Object, BaseValue {
         value = InkList((singleItem, singleValue))
     }
     
-    public static func RetainListOriginsForAssignment(_ oldValue: Object?, _ newValue: Object?) {
+    public static func retainListOriginsForAssignment(old oldValue: Object?, new newValue: Object?) {
         let oldList = oldValue as? ListValue
         let newList = newValue as? ListValue
         
         if oldList != nil && newList != nil && newList!.value!.count == 0 {
-            newList!.value!.SetInitialOriginNames(oldList!.value?.originNames)
+            newList!.value!.setInitialOriginNames(oldList!.value?.originNames)
         }
     }
     

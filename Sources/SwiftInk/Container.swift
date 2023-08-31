@@ -14,8 +14,8 @@ public class Container: Object, Nameable {
 //        }
     }
     
-    public func SetContent(_ newValue: [Object]) throws {
-        try AddContent(newValue)
+    public func setContent(_ newValue: [Object]) throws {
+        try add(listOfContent: newValue)
     }
     
     private var _content: [Object]
@@ -57,7 +57,7 @@ public class Container: Object, Nameable {
             for kvPair in newValue! {
                 let named = kvPair.value as? Nameable
                 if named != nil {
-                    AddToNamedContentOnly(named!)
+                    addToNamedContentOnly(named!)
                 }
             }
         }
@@ -116,7 +116,7 @@ public class Container: Object, Nameable {
     var _pathToFirstLeafContent: Path?
     public var pathToFirstLeafContent: Path {
         if _pathToFirstLeafContent == nil {
-            _pathToFirstLeafContent = path.PathByAppendingPath(internalPathToFirstLeafContent)
+            _pathToFirstLeafContent = path.path(byAppendingPath: internalPathToFirstLeafContent)
         }
         return _pathToFirstLeafContent!
     }
@@ -130,7 +130,7 @@ public class Container: Object, Nameable {
                 container = container!.content[0] as? Container
             }
         }
-        return Path(components)
+        return Path(withComponents: components)
     }
     
     override init() {
@@ -141,7 +141,7 @@ public class Container: Object, Nameable {
         namedContent = [:]
     }
     
-    public func AddContent(_ contentObj: Object) throws {
+    public func add(content contentObj: Object) throws {
         _content.append(contentObj)
         
         if contentObj.parent != nil {
@@ -150,16 +150,16 @@ public class Container: Object, Nameable {
         
         contentObj.parent = self
         
-        TryAddNamedContent(contentObj)
+        tryAddNamedContent(contentObj)
     }
     
-    public func AddContent(_ contentList: [Object]) throws {
+    public func add(listOfContent contentList: [Object]) throws {
         for c in contentList {
-            try AddContent(c)
+            try add(content: c)
         }
     }
     
-    public func InsertContent(_ contentObj: Object, _ index: Int) throws {
+    public func insert(content contentObj: Object, at index: Int) throws {
         _content.insert(contentObj, at: index)
         
         if contentObj.parent != nil {
@@ -168,32 +168,32 @@ public class Container: Object, Nameable {
         
         contentObj.parent = self
         
-        TryAddNamedContent(contentObj)
+        tryAddNamedContent(contentObj)
     }
     
-    public func TryAddNamedContent(_ contentObj: Object) {
+    public func tryAddNamedContent(_ contentObj: Object) {
         let namedContentObj = contentObj as? Nameable
         if namedContentObj != nil && namedContentObj!.hasValidName {
-            AddToNamedContentOnly(namedContentObj!)
+            addToNamedContentOnly(namedContentObj!)
         }
     }
     
-    public func AddToNamedContentOnly(_ namedContentObj: Nameable) {
+    public func addToNamedContentOnly(_ namedContentObj: Nameable) {
         assert(namedContentObj is Object, "Can only add Objects to a Container")
         let runtimeObj = namedContentObj as! Object
         runtimeObj.parent = self
         namedContent[namedContentObj.name!] = namedContentObj
     }
     
-    public func AddContentsOfContainer(_ otherContainer: Container) {
+    public func addContents(ofContainer otherContainer: Container) {
         _content.append(contentsOf: otherContainer.content)
         for obj in otherContainer.content {
             obj.parent = self
-            TryAddNamedContent(obj)
+            tryAddNamedContent(obj)
         }
     }
     
-    internal func ContentWithPathComponent(_ component: Path.Component) -> Object? {
+    internal func content(withPathComponent component: Path.Component) -> Object? {
         if component.isIndex {
             if component.index >= 0 && component.index < content.count {
                 return content[component.index]
@@ -225,7 +225,7 @@ public class Container: Object, Nameable {
         }
     }
     
-    public func ContentAtPath(_ path: Path, partialPathStart: Int = 0, partialPathLength: Int = -1) -> SearchResult {
+    public func content(atPath path: Path, partialPathStart: Int = 0, partialPathLength: Int = -1) -> SearchResult {
         var partialPathLength = partialPathLength
         if partialPathLength == -1 {
             partialPathLength = path.length
@@ -238,7 +238,7 @@ public class Container: Object, Nameable {
         var currentObj: Object? = self
         
         for i in partialPathStart ..< partialPathLength {
-            let comp = path.GetComponent(i)
+            let comp = path.getComponent(atIndex: i)
             
             // Path component was wrong type
             if currentContainer == nil {
@@ -246,7 +246,7 @@ public class Container: Object, Nameable {
                 break
             }
             
-            let foundObj = currentContainer!.ContentWithPathComponent(comp)
+            let foundObj = currentContainer!.content(withPathComponent: comp)
             
             // Couldn't resolve entire path?
             if foundObj == nil {
@@ -263,7 +263,7 @@ public class Container: Object, Nameable {
         return result
     }
     
-    public func BuildStringOfHierarchy(_ initialSb: String, _ indentation: Int, _ pointedObj: Object?) -> String {
+    public func buildStringOfHierarchy(withInitialString initialSb: String, withIndentation indentation: Int, forObject pointedObj: Object?) -> String {
         var sb = initialSb
         var currentIndentation = indentation
         
@@ -293,7 +293,7 @@ public class Container: Object, Nameable {
             let obj = content[i]
             
             if let container = obj as? Container {
-                sb = container.BuildStringOfHierarchy(sb, currentIndentation, pointedObj)
+                sb = container.buildStringOfHierarchy(withInitialString: sb, withIndentation: currentIndentation, forObject: pointedObj)
             }
             else {
                 appendIndentation()
@@ -336,7 +336,7 @@ public class Container: Object, Nameable {
             for objKV in onlyNamed {
                 assert(objKV.value is Container, "Can only print out named Containers")
                 let container = objKV.value as! Container
-                sb = container.BuildStringOfHierarchy(sb, currentIndentation, pointedObj)
+                sb = container.buildStringOfHierarchy(withInitialString: sb, withIndentation: currentIndentation, forObject: pointedObj)
                 sb.append("\n")
             }
         }
@@ -347,8 +347,8 @@ public class Container: Object, Nameable {
         return sb
     }
     
-    public func BuildStringOfHierarchy() -> String {
-        let sb = BuildStringOfHierarchy("", 0, nil)
+    public func buildStringOfHierarchy() -> String {
+        let sb = buildStringOfHierarchy(withInitialString: "", withIndentation: 0, forObject: nil)
         return sb
     }
 }

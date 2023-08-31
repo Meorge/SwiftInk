@@ -20,17 +20,17 @@ public class ChoicePoint: Object, CustomStringConvertible {
     private var _pathOnChoice: Path?
     
     public var choiceTarget: Container? {
-        let thePath = ResolvePath(_pathOnChoice!)
+        let thePath = resolve(path: _pathOnChoice!)
         let theContainer = thePath?.container
         return theContainer
     }
     
     public var pathStringOnChoice: String {
         get {
-            CompactPathString(pathOnChoice!)
+            compactString(forPath: pathOnChoice!)
         }
         set {
-            pathOnChoice = Path(newValue)
+            pathOnChoice = Path(fromComponentsString: newValue)
         }
     }
     
@@ -78,7 +78,7 @@ public class ChoicePoint: Object, CustomStringConvertible {
     }
     
     public var description: String {
-        let targetLineNum: Int? = DebugLineNumberOfPath(path: pathOnChoice)
+        let targetLineNum: Int? = debugLineNumber(ofPath: pathOnChoice)
         var targetString = String(describing: pathOnChoice!)
         
         if targetLineNum != nil {

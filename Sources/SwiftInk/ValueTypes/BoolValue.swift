@@ -10,23 +10,23 @@ public class BoolValue: Object, BaseValue {
     public typealias T = Bool
     
     public var valueType: ValueType {
-        .Bool
+        .bool
     }
     
-    public func Cast(_ newType: ValueType) throws -> (any BaseValue)? {
+    public func cast(to newType: ValueType) throws -> (any BaseValue)? {
         if newType == valueType {
             return self
         }
         
-        if newType == .Int {
+        if newType == .int {
             return IntValue(value! ? 1 : 0)
         }
         
-        if newType == .Float {
+        if newType == .float {
             return FloatValue(value! ? 1.0 : 0.0)
         }
         
-        if newType == .String {
+        if newType == .string {
             return StringValue(value! ? "true" : "false")
         }
         

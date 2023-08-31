@@ -2,14 +2,14 @@ import Foundation
 
 public enum ValueType: Int
 {
-    case Bool = -1
-    case Int
-    case Float
-    case List
-    case String
+    case bool = -1
+    case int
+    case float
+    case list
+    case string
     
-    case DivertTarget
-    case VariablePointer
+    case divertTarget
+    case variablePointer
 }
 
 public protocol BaseValue<T>: Equatable, CustomStringConvertible {
@@ -17,7 +17,7 @@ public protocol BaseValue<T>: Equatable, CustomStringConvertible {
     var valueType: ValueType { get }
     var isTruthy: Bool { get }
     
-    func Cast(_ newType: ValueType) throws -> (any BaseValue)?
+    func cast(to newType: ValueType) throws -> (any BaseValue)?
     
     var value: T? { get set }
     
@@ -30,7 +30,7 @@ extension BaseValue {
     }
 }
 
-public func CreateValue(_ val: Any?) -> Object? {
+public func createValue(fromAny val: Any?) -> Object? {
     let val = val!
     switch val {
     case is Int:

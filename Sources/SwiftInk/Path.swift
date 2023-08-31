@@ -34,7 +34,7 @@ public class Path: Equatable, CustomStringConvertible {
             self.index = -1
         }
         
-        public static func ToParent() -> Component {
+        public static func toParent() -> Component {
             return Component(parentId)
         }
         
@@ -48,7 +48,7 @@ public class Path: Equatable, CustomStringConvertible {
         }
     }
     
-    public func GetComponent(_ index: Int) -> Component {
+    public func getComponent(atIndex index: Int) -> Component {
         return components[index]
     }
     
@@ -61,7 +61,7 @@ public class Path: Equatable, CustomStringConvertible {
     public var tail: Path? {
         if components.count >= 2 {
             let tailComps = Array(components[1 ..< components.count])
-            return Path(tailComps)
+            return Path(withComponents: tailComps)
         }
         else {
             return Path.selfPath
@@ -86,13 +86,13 @@ public class Path: Equatable, CustomStringConvertible {
         components = []
     }
     
-    init(_ head: Component, _ tail: Path) {
+    init(withHead head: Component, withTail tail: Path) {
         components = []
         components.append(head)
         components.append(contentsOf: tail.components)
     }
     
-    init(_ components: [Component], _ relative: Bool = false) {
+    init(withComponents components: [Component], isRelative relative: Bool = false) {
         self.components = []
         self.components.append(contentsOf: components)
         
@@ -100,7 +100,7 @@ public class Path: Equatable, CustomStringConvertible {
         
     }
     
-    init(_ componentsString: String) {
+    init(fromComponentsString componentsString: String) {
         components = []
         self.componentsString = componentsString
     }
@@ -113,7 +113,7 @@ public class Path: Equatable, CustomStringConvertible {
         return path
     }
     
-    public func PathByAppendingPath(_ pathToAppend: Path) -> Path {
+    public func path(byAppendingPath pathToAppend: Path) -> Path {
         let p = Path()
         
         var upwardMoves = 0
@@ -137,7 +137,7 @@ public class Path: Equatable, CustomStringConvertible {
         return p
     }
     
-    public func PathByAppendingComponent(_ c: Component) -> Path {
+    public func path(byAppendingComponent c: Component) -> Path {
         let p = Path()
         p.components.append(contentsOf: components)
         p.components.append(c)

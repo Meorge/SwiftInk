@@ -20,35 +20,35 @@ public class Profiler {
     }
     
     /// Generate a printable report based on the data recording during profiling.
-    public func Report() -> String {
+    public func report() -> String {
         var sb = ""
         sb += "\(_numContinues) CONTINUES / LINES:\n"
-        sb += "TOTAL TIME: \(Profiler.FormatMillisecs(_continueTotal))\n"
-        sb += "SNAPSHOTTING: \(Profiler.FormatMillisecs(_snapTotal))\n"
-        sb += "OTHER: \(Profiler.FormatMillisecs(_continueTotal - (_stepTotal + _snapTotal)))\n"
+        sb += "TOTAL TIME: \(Profiler.formatMillisecs(_continueTotal))\n"
+        sb += "SNAPSHOTTING: \(Profiler.formatMillisecs(_snapTotal))\n"
+        sb += "OTHER: \(Profiler.formatMillisecs(_continueTotal - (_stepTotal + _snapTotal)))\n"
         sb += "\(_rootNode)"
         return sb
     }
     
-    public func PreContinue() {
-        _continueWatch.Reset()
-        _continueWatch.Start()
+    public func preContinue() {
+        _continueWatch.reset()
+        _continueWatch.start()
     }
     
-    public func PostContinue() {
-        _continueWatch.Stop()
-        _continueTotal += Millisecs(_continueWatch)
+    public func postContinue() {
+        _continueWatch.stop()
+        _continueTotal += millisecs(forStopwatch: _continueWatch)
         _numContinues += 1
     }
     
-    public func PreStep() {
+    public func preStep() {
         _currStepStack = nil
-        _stepWatch.Reset()
-        _stepWatch.Start()
+        _stepWatch.reset()
+        _stepWatch.start()
     }
     
-    public func Step(_ callstack: CallStack) {
-        _stepWatch.Stop()
+    public func step(_ callstack: CallStack) {
+        _stepWatch.stop()
         
         var stack: [String] = []
         for i in 0 ..< callstack.elements.count {
@@ -57,7 +57,7 @@ public class Profiler {
                 let objPath = callstack.elements[i].currentPointer.path!
                 
                 for c in 0 ..< objPath.length {
-                    let comp = objPath.GetComponent(c)
+                    let comp = objPath.getComponent(atIndex: c)
                     if !comp.isIndex {
                         stackElementName = comp.name!
                         break
@@ -70,7 +70,7 @@ public class Profiler {
         
         _currStepStack = stack
         
-        let currObj = callstack.currentElement.currentPointer.Resolve()
+        let currObj = callstack.currentElement.currentPointer.resolve()
         
         var stepType: String? = nil
         let controlCommandStep = currObj as? ControlCommand
@@ -83,16 +83,16 @@ public class Profiler {
         
         _currStepDetails = StepDetails(type: stepType!, obj: currObj)
         
-        _stepWatch.Start()
+        _stepWatch.start()
     }
     
-    public func PostStep() {
-        _stepWatch.Stop()
+    public func postStep() {
+        _stepWatch.stop()
         
-        let duration = Millisecs(_stepWatch)
+        let duration = millisecs(forStopwatch: _stepWatch)
         _stepTotal += duration
         
-        _rootNode.AddSample(_currStepStack!, duration)
+        _rootNode.addSample(withStack: _currStepStack!, forDuration: duration)
         
         
         _currStepDetails!.time = duration
@@ -104,7 +104,7 @@ public class Profiler {
     /// stepping over different internal ink instruction types.
     /// This report type is primarily used to profile the ink engine itself rather
     /// than your own specific ink.
-    public func StepLengthReport() -> String {
+    public func stepLengthReport() -> String {
         var sb = ""
         
         sb += "TOTAL: \(_rootNode.totalMillisecs)ms"
@@ -140,7 +140,7 @@ public class Profiler {
     
     /// Create a large log of all the internal instructions that were evaluated while profiling was active.
     /// Log is in a tab-separated format, for easy loading into a spreadsheet application.
-    public func Megalog() -> String {
+    public func megalog() -> String {
         var sb = ""
         
         sb += "Step type\tDescription\tPath\tTime\n"
@@ -164,22 +164,22 @@ public class Profiler {
         return sb
     }
     
-    public func PreSnapshot() {
-        _snapWatch.Reset()
-        _snapWatch.Start()
+    public func preSnapshot() {
+        _snapWatch.reset()
+        _snapWatch.start()
     }
     
-    public func PostSnapshot() {
-        _snapWatch.Stop()
-        _snapTotal += Millisecs(_snapWatch)
+    public func postSnapshot() {
+        _snapWatch.stop()
+        _snapTotal += millisecs(forStopwatch: _snapWatch)
     }
     
-    func Millisecs(_ watch: Stopwatch) -> Double {
+    func millisecs(forStopwatch watch: Stopwatch) -> Double {
         watch.elapsedTime * 1000.0
     }
     
     
-    public static func FormatMillisecs(_ num: Double) -> String {
+    public static func formatMillisecs(_ num: Double) -> String {
         let fmt = NumberFormatter()
         fmt.numberStyle = .decimal
         if num > 5000 {
@@ -258,11 +258,11 @@ public class ProfileNode: CustomStringConvertible {
         self.key = key
     }
     
-    public func AddSample(_ stack: [String], _ duration: Double) {
-        AddSample(stack, -1, duration)
+    public func addSample(withStack stack: [String], forDuration duration: Double) {
+        addSample(withStack: stack, atStackIndex: -1, forDuration: duration)
     }
     
-    func AddSample(_ stack: [String], _ stackIdx: Int, _ duration: Double) {
+    func addSample(withStack stack: [String], atStackIndex stackIdx: Int, forDuration duration: Double) {
         _totalSampleCount += 1
         _totalMillisecs += duration
         
@@ -272,11 +272,11 @@ public class ProfileNode: CustomStringConvertible {
         }
         
         if stackIdx + 1 < stack.count {
-            AddSampleToNode(stack, stackIdx + 1, duration)
+            addSampleToNode(withStack: stack, atStackIndex: stackIdx + 1, forDuration: duration)
         }
     }
     
-    func AddSampleToNode(_ stack: [String], _ stackIdx: Int, _ duration: Double) {
+    func addSampleToNode(withStack stack: [String], atStackIndex stackIdx: Int, forDuration duration: Double) {
         let nodeKey = stack[stackIdx]
 
         var node: ProfileNode
@@ -288,21 +288,21 @@ public class ProfileNode: CustomStringConvertible {
             node = _nodes[nodeKey]!
         }
         
-        node.AddSample(stack, stackIdx, duration)
+        node.addSample(withStack: stack, atStackIndex: stackIdx, forDuration: duration)
     }
     
     public var descendingOrderedNodes: [Dictionary<String, ProfileNode>.Element] {
         return _nodes.sorted { $0.value._totalMillisecs > $1.value._totalMillisecs }
     }
     
-    func PrintHierarchy(_ sb: String, _ indent: Int) -> String {
+    func printHierarchy(withInitialString sb: String, withIndentation indent: Int) -> String {
         var new = sb
-        new = Pad(new, indent)
+        new = pad(new, withSpaces: indent)
         
         new += "\(key ?? "nil key"): \(ownReport)\n"
         
         for keyNode in descendingOrderedNodes {
-            new = keyNode.value.PrintHierarchy(new, indent + 1)
+            new = keyNode.value.printHierarchy(withInitialString: new, withIndentation: indent + 1)
         }
         
         return new
@@ -314,12 +314,12 @@ public class ProfileNode: CustomStringConvertible {
     /// recorded for both too.
     public var ownReport: String {
         var sb = ""
-        sb += "total \(Profiler.FormatMillisecs(_totalMillisecs)), self \(Profiler.FormatMillisecs(_selfMillisecs))"
+        sb += "total \(Profiler.formatMillisecs(_totalMillisecs)), self \(Profiler.formatMillisecs(_selfMillisecs))"
         sb += " (\(_selfSampleCount) self samples, \(_totalSampleCount) total)"
         return sb
     }
     
-    func Pad(_ sb: String, _ spaces: Int) -> String {
+    func pad(_ sb: String, withSpaces spaces: Int) -> String {
         var new = sb
         for _ in 0 ..< spaces {
             new += "   "
@@ -328,7 +328,7 @@ public class ProfileNode: CustomStringConvertible {
     }
     
     public var description: String {
-        return PrintHierarchy("", 0)
+        return printHierarchy(withInitialString: "", withIndentation: 0)
     }
     
     var _nodes: [String: ProfileNode] = [:]
@@ -339,18 +339,18 @@ public class ProfileNode: CustomStringConvertible {
 }
 
 class Stopwatch {
-    func Start() {
+    func start() {
         startTime = CFAbsoluteTimeGetCurrent()
         endTime = 0.0
         running = true
     }
     
-    func Stop() {
+    func stop() {
         endTime = CFAbsoluteTimeGetCurrent()
         running = false
     }
     
-    func Reset() {
+    func reset() {
         startTime = 0.0
         endTime = 0.0
         running = false

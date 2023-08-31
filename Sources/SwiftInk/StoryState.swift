@@ -22,7 +22,7 @@ public class StoryState {
     /// Exports the current state to JSON format, in order to save the game,
     /// and returns it as a string.
     /// - Returns: The save state in JSON format.
-    public func WriteJson() throws -> JSON {
+    public func writeJSON() throws -> JSON {
         var obj = JSON()
         
         // Flows
@@ -31,7 +31,7 @@ public class StoryState {
         // Multi-flow
         if _namedFlows != nil && !_namedFlows!.isEmpty {
             for namedFlow in _namedFlows! {
-                flowsObj[namedFlow.key] = namedFlow.value.WriteJson()
+                flowsObj[namedFlow.key] = namedFlow.value.writeJSON()
             }
         }
         // Single flow
@@ -41,15 +41,15 @@ public class StoryState {
         // behavior.
         else
         {
-            flowsObj[_currentFlow.name!] = _currentFlow.WriteJson()
+            flowsObj[_currentFlow.name!] = _currentFlow.writeJSON()
         }
         
         obj["flows"] = flowsObj
         
         
         obj["currentFlowName"].string = _currentFlow.name!
-        obj["variablesState"] = try variablesState!.WriteJson()
-        obj["evalStack"] = WriteListRuntimeObjs(evaluationStack)
+        obj["variablesState"] = try variablesState!.writeJSON()
+        obj["evalStack"] = writeListRuntimeObjs(evaluationStack)
         
         if !divertedPointer!.isNull {
             obj["currentDivertTarget"].string = divertedPointer!.path!.componentsString
@@ -70,7 +70,7 @@ public class StoryState {
     
     /// Loads a previously saved state in JSON format.
     /// - Parameter json: The JSON string to load.
-    public func LoadJson(_ json: JSON) throws {
+    public func loadJSON(_ json: JSON) throws {
         guard let jSaveVersion = json["inkSaveVersion"].int else {
             fatalError("ink save format incorrect, can't load")
         }
@@ -123,24 +123,24 @@ public class StoryState {
         else {
             _namedFlows = nil
             _currentFlow.name = kDefaultFlowName
-            try _currentFlow.callStack!.SetJsonToken(json["callstackThreads"].dictionaryValue, story!)
-            _currentFlow.outputStream = try JArrayToRuntimeObjList(jsonArray: json["outputStream"].arrayValue)
-            _currentFlow.currentChoices = try JArrayToRuntimeObjList(jsonArray: json["currentChoices"].arrayValue).map { $0 as! Choice }
+            try _currentFlow.callStack!.setJSONToken(json["callstackThreads"].dictionaryValue, withStoryContext: story!)
+            _currentFlow.outputStream = try jsonArrayToRuntimeObjList(jsonArray: json["outputStream"].arrayValue)
+            _currentFlow.currentChoices = try jsonArrayToRuntimeObjList(jsonArray: json["currentChoices"].arrayValue).map { $0 as! Choice }
             
             var choiceThreadsObj = json["choiceThreads"].dictionary
-            try _currentFlow.LoadFlowChoiceThreads(choiceThreadsObj!, story!)
+            try _currentFlow.loadFlow(withChoiceThreadsJSON: choiceThreadsObj!, forStory: story!)
         }
         
-        OutputStreamDirty()
+        markOutputStreamDirty()
         _aliveFlowNamesDirty = true
         
-        try variablesState?.SetJsonToken(json["variablesState"])
+        try variablesState?.setJSONToken(json["variablesState"])
         variablesState?.callStack = _currentFlow.callStack
         
-        evaluationStack = try JArrayToRuntimeObjList(jsonArray: json["evalStack"].arrayValue)
+        evaluationStack = try jsonArrayToRuntimeObjList(jsonArray: json["evalStack"].arrayValue)
         
         if let currentDivertTargetPath = json["currentDivertTarget"].string {
-            divertedPointer = try story?.pointer(at: Path(currentDivertTargetPath))
+            divertedPointer = try story?.pointer(at: Path(fromComponentsString: currentDivertTargetPath))
         }
         
         _visitCounts = json["visitCounts"].dictionary!.mapValues { $0.intValue }
@@ -168,9 +168,9 @@ public class StoryState {
     /// ```
     /// - Parameter pathString: The dot-separated path string of the specific knot or stitch.
     /// - Returns: The number of times the specific knot or stitch has been encountered by the ink engine.
-    public func VisitCountAtPathString(_ pathString: String) throws -> Int {
+    public func visitCounts(atPathString pathString: String) throws -> Int {
         if _patch != nil {
-            guard let container = story!.contentAtPath(Path(pathString))?.container else {
+            guard let container = story!.contentAtPath(Path(fromComponentsString: pathString))?.container else {
                 throw StoryError.contentAtPathNotFound(path: pathString)
             }
             
@@ -186,7 +186,7 @@ public class StoryState {
         return 0
     }
     
-    public func VisitCountForContainer(_ container: Container) throws -> Int {
+    public func visitCounts(forContainer container: Container) throws -> Int {
         if !container.visitsShouldBeCounted {
             try story?.error("Read count for target (\(container.name!) - on \(container.debugMetadata!)) unknown")
             return 0
@@ -199,9 +199,9 @@ public class StoryState {
         return _visitCounts[container.path.description] ?? 0
     }
     
-    public func IncrementVisitCountForContainer(_ container: Container) throws {
+    public func incrementVisitCount(forContainer container: Container) throws {
         if _patch != nil {
-            var currCount = try VisitCountForContainer(container)
+            var currCount = try visitCounts(forContainer: container)
             currCount += 1
             _patch!._visitCounts[container] = currCount
             return
@@ -213,7 +213,7 @@ public class StoryState {
         }
     }
     
-    public func RecordTurnIndexVisitToContainer(_ container: Container) {
+    public func recordTurnIndexVisit(toContainer container: Container) {
         if _patch != nil {
             _patch!._turnIndices[container] = currentTurnIndex
             return
@@ -222,7 +222,7 @@ public class StoryState {
         _turnIndices[container.path.description] = currentTurnIndex
     }
     
-    public func TurnsSinceForContainer(_ container: Container) throws -> Int {
+    public func turnsSince(forContainer container: Container) throws -> Int {
         if !container.turnIndexShouldBeCounted {
             try story?.error("TURNS_SINCE() for target (\(container.name!) - on \(container.debugMetadata!)) unknown.")
         }
@@ -338,7 +338,7 @@ public class StoryState {
                 }
             }
             
-            _currentText = CleanOutputWhitespace(sb)
+            _currentText = cleanOutputWhitespace(sb)
             _outputStreamTextDirty = false
         }
         
@@ -346,7 +346,7 @@ public class StoryState {
     }
     var _currentText: String = ""
     
-    public func CleanOutputWhitespace(_ str: String) -> String {
+    public func cleanOutputWhitespace(_ str: String) -> String {
         var sb = ""
         
         var currentWhitespaceStart = -1
@@ -392,7 +392,7 @@ public class StoryState {
                 if let controlCommand = outputObj as? ControlCommand {
                     if controlCommand.commandType == .beginTag {
                         if inTag && !sb.isEmpty {
-                            let txt = CleanOutputWhitespace(sb)
+                            let txt = cleanOutputWhitespace(sb)
                             _currentTags.append(txt)
                             sb = ""
                         }
@@ -401,7 +401,7 @@ public class StoryState {
                     
                     else if controlCommand.commandType == .endTag {
                         if !sb.isEmpty {
-                            let txt = CleanOutputWhitespace(sb)
+                            let txt = cleanOutputWhitespace(sb)
                             _currentTags.append(txt)
                             sb = ""
                         }
@@ -423,7 +423,7 @@ public class StoryState {
             }
             
             if !sb.isEmpty {
-                let txt = CleanOutputWhitespace(sb)
+                let txt = cleanOutputWhitespace(sb)
                 _currentTags.append(txt)
                 sb = ""
             }
@@ -472,7 +472,7 @@ public class StoryState {
         }
     }
     
-    public init(_ story: Story) {
+    public init(forStory story: Story) {
         self.story = story
         self.currentTurnIndex = -1
         self.didSafeExit = false
@@ -483,24 +483,24 @@ public class StoryState {
         
         _currentFlow = Flow(kDefaultFlowName, story)
         
-        OutputStreamDirty()
+        markOutputStreamDirty()
         _aliveFlowNamesDirty = true
         
         evaluationStack = []
         
-        variablesState = VariablesState(callStack, story.listDefinitions!)
+        variablesState = VariablesState(withCallstack: callStack, listDefsOrigin: story.listDefinitions!)
         
         _visitCounts = [:]
         _turnIndices = [:]
         
-        GoToStart()
+        goToStart()
     }
     
-    public func GoToStart() {
-        callStack.currentElement.currentPointer = Pointer.StartOf(story!.mainContentContainer)
+    public func goToStart() {
+        callStack.currentElement.currentPointer = Pointer.startOf(container: story!.mainContentContainer)
     }
     
-    internal func SwitchFlow_Internal(_ flowName: String) {
+    internal func switchFlow_Internal(_ flowName: String) {
         _namedFlows = [:]
         _namedFlows![kDefaultFlowName] = _currentFlow
         
@@ -519,24 +519,24 @@ public class StoryState {
         variablesState?.callStack = _currentFlow.callStack
         
         // Cause text to be regenerated from output stream if necessary
-        OutputStreamDirty()
+        markOutputStreamDirty()
     }
     
-    internal func SwitchToDefaultFlow_Internal() {
+    internal func switchToDefaultFlow_Internal() {
         if _namedFlows == nil || !_namedFlows!.isEmpty {
             return
         }
-        SwitchFlow_Internal(kDefaultFlowName)
+        switchFlow_Internal(kDefaultFlowName)
     }
     
-    internal func RemoveFlow_Internal(_ flowName: String) throws {
+    internal func removeFlow_Internal(_ flowName: String) throws {
         if flowName == kDefaultFlowName {
             throw StoryError.cannotDestroyDefaultFlow
         }
         
         // If we're currently in the flow that's being removed, switch back to default
         if _currentFlow.name == flowName {
-            SwitchToDefaultFlow_Internal()
+            switchToDefaultFlow_Internal()
         }
         
         
@@ -549,18 +549,18 @@ public class StoryState {
     // Objects are treated as immutable after they've been set up.
     // (e.g. we don't edit a StringValue after it's been created and added.)
     // I wonder if there's a sensible way to enforce that...??
-    public func CopyAndStartPatching() -> StoryState {
-        let copy = StoryState(story!)
+    public func copyAndStartPatching() -> StoryState {
+        let copy = StoryState(forStory: story!)
         
-        copy._patch = StatePatch(_patch)
+        copy._patch = StatePatch(copying: _patch)
         
         // Hijack the new default flow to become a copy of our current one
         // If the patch is applied, then this new flow will replace the old one in _namedFlows
         copy._currentFlow.name = _currentFlow.name
-        copy._currentFlow.callStack = CallStack(_currentFlow.callStack!)
+        copy._currentFlow.callStack = CallStack(copying: _currentFlow.callStack!)
         copy._currentFlow.currentChoices.append(contentsOf: _currentFlow.currentChoices)
         copy._currentFlow.outputStream.append(contentsOf: _currentFlow.outputStream)
-        copy.OutputStreamDirty()
+        copy.markOutputStreamDirty()
         
         // The copy of the state has its own copy of the named flows dictionary,
         // except with the current flow replaced with the copy above
@@ -612,7 +612,7 @@ public class StoryState {
         return copy
     }
     
-    public func RestoreAfterPatch() {
+    public func restoreAfterPatch() {
         // VariablesState was being borrowed by the patched
         // state, so restore it with our own callstack.
         // _patch will be nil normally, but if you're in the
@@ -621,25 +621,25 @@ public class StoryState {
         variablesState?.patch = _patch // usually nil
     }
     
-    public func ApplyAnyPatch() {
+    public func applyAnyPatch() {
         if _patch == nil {
             return
         }
         
-        variablesState?.ApplyPatch()
+        variablesState?.applyPatch()
         
         for pathToCount in _patch?._visitCounts ?? [:] {
-            ApplyCountChanges(pathToCount.key, pathToCount.value, isVisit: true)
+            applyCountChanges(pathToCount.key, pathToCount.value, isVisit: true)
         }
         
         for pathToIndex in _patch?.turnIndices ?? [:] {
-            ApplyCountChanges(pathToIndex.key, pathToIndex.value, isVisit: false)
+            applyCountChanges(pathToIndex.key, pathToIndex.value, isVisit: false)
         }
         
         _patch = nil
     }
     
-    func ApplyCountChanges(_ container: Container, _ newCount: Int, isVisit: Bool) {
+    func applyCountChanges(_ container: Container, _ newCount: Int, isVisit: Bool) {
         if isVisit {
             _visitCounts[container.path.description] = newCount
         }
@@ -648,40 +648,40 @@ public class StoryState {
         }
     }
     
-    public func ResetErrors() {
+    public func resetErrors() {
         currentErrors = []
         currentWarnings = []
     }
     
-    public func ResetOutput(_ objs: [Object]? = nil) {
+    public func resetOutput(_ objs: [Object]? = nil) {
         _currentFlow.outputStream = []
         if objs != nil {
             _currentFlow.outputStream.append(contentsOf: objs!)
         }
-        OutputStreamDirty()
+        markOutputStreamDirty()
     }
     
     /// Push to output stream, but split out newlines in text for consistency
     /// in dealing with them later.
-    public func PushToOutputStream(_ obj: Object) {
+    public func pushToOutputStream(_ obj: Object) {
         if let text = obj as? StringValue {
-            if let listText = TrySplittingHeadTailWhitespace(text) {
+            if let listText = trySplittingHeadTailWhitespace(text) {
                 for textObj in listText {
-                    PushToOutputStreamIndividual(textObj)
+                    pushToOutputStreamIndividual(textObj)
                 }
-                OutputStreamDirty()
+                markOutputStreamDirty()
                 return
             }
         }
         
-        PushToOutputStreamIndividual(obj)
+        pushToOutputStreamIndividual(obj)
         
-        OutputStreamDirty()
+        markOutputStreamDirty()
     }
     
-    public func PopFromOutputStream(_ count: Int) {
+    public func popFromOutputStream(count: Int) {
         _currentFlow.outputStream.removeLast(count)
-        OutputStreamDirty()
+        markOutputStreamDirty()
     }
     
     // At both the start and the end of the string, split out the new lines like so:
@@ -695,7 +695,7 @@ public class StoryState {
     //
     //  - If no splitting is necessary, null is returned.
     //  - A newline on its own is returned in a list for consistency.
-    func TrySplittingHeadTailWhitespace(_ single: StringValue) -> [StringValue]? {
+    func trySplittingHeadTailWhitespace(_ single: StringValue) -> [StringValue]? {
         let str = single.value!
         
         var headFirstNewlineIdx = -1
@@ -783,7 +783,7 @@ public class StoryState {
     }
     
     
-    func PushToOutputStreamIndividual(_ obj: Object) {
+    func pushToOutputStreamIndividual(_ obj: Object) {
         let glue = obj as? Glue
         let text = obj as? StringValue
         
@@ -791,7 +791,7 @@ public class StoryState {
         
         // New glue, so comp away any whitespace from the end of the stream
         if glue != nil {
-            TrimNewlinesFromOutputStream()
+            trimNewlinesFromOutputStream()
             includeInOutput = true
         }
         
@@ -804,7 +804,7 @@ public class StoryState {
             // Where does the current function call begin?
             var functionTrimIndex = -1
             let currentEl = callStack.currentElement
-            if currentEl.type == .Function {
+            if currentEl.type == .function {
                 functionTrimIndex = currentEl.functionStartInOuputStream
             }
             
@@ -859,7 +859,7 @@ public class StoryState {
                 // Able to completely reset when normal text is pushed
                 else if text!.isNonWhitespace {
                     if glueTrimIndex > -1 {
-                        RemoveExistingGlue()
+                        removeExistingGlue()
                     }
                     
                     // Tell all functions in callstack that we have seen proper text,
@@ -868,7 +868,7 @@ public class StoryState {
                         let callstackElements = callStack.elements
                         for i in (0 ... callstackElements.count - 1).reversed() {
                             let el = callstackElements[i]
-                            if el.type == .Function {
+                            if el.type == .function {
                                 el.functionStartInOuputStream = -1
                             }
                             else {
@@ -889,11 +889,11 @@ public class StoryState {
         
         if includeInOutput {
             _currentFlow.outputStream.append(obj)
-            OutputStreamDirty()
+            markOutputStreamDirty()
         }
     }
     
-    func TrimNewlinesFromOutputStream() {
+    func trimNewlinesFromOutputStream() {
         var removeWhitespaceFrom = -1
         
         // Work back from the end, and try to find the point where
@@ -932,10 +932,10 @@ public class StoryState {
             }
         }
         
-        OutputStreamDirty()
+        markOutputStreamDirty()
     }
     
-    func RemoveExistingGlue() {
+    func removeExistingGlue() {
         for i in (0...outputStream.count - 1).reversed() {
             let c = outputStream[i]
             if c is Glue {
@@ -946,7 +946,7 @@ public class StoryState {
             }
         }
         
-        OutputStreamDirty()
+        markOutputStreamDirty()
     }
     
     public var outputStreamEndsInNewLine: Bool {
@@ -994,7 +994,7 @@ public class StoryState {
         return false
     }
     
-    public func PushEvaluationStack(_ obj: Object) {
+    public func pushEvaluationStack(_ obj: Object) {
         // Include metadata about the origin List for list values when
         // they're used, so that lower level functions can make use
         // of the origin list to get related items, or make comparisons
@@ -1017,22 +1017,22 @@ public class StoryState {
         evaluationStack.append(obj)
     }
     
-    public func PopEvaluationStack() -> Object? {
+    public func popEvaluationStack() -> Object? {
         evaluationStack.popLast()
     }
     
-    public func PeekEvaluationStack() -> Object? {
+    public func peekEvaluationStack() -> Object? {
         evaluationStack.last
     }
     
-    public func PopEvaluationStack(_ numberOfObjects: Int) throws -> [Object] {
+    public func popEvaluationStack(count numberOfObjects: Int) throws -> [Object] {
         if numberOfObjects > evaluationStack.count {
             throw StoryError.poppingTooManyObjects
         }
         
         var popped: [Object] = []
         for _ in 0 ..< numberOfObjects {
-            popped.append(PopEvaluationStack()!)
+            popped.append(popEvaluationStack()!)
         }
         
         // NOTE: Not in original C# but it seems like the order is backwards otherwise??
@@ -1048,19 +1048,19 @@ public class StoryState {
     /// want it to reset so that you can divert elsewhere using `ChoosePathString()`.
     /// Otherwise, after finishing the content you diverted to, it would continue where it left off.
     /// Calling this is equivalent to calling `-> END` in ink.
-    public func ForceEnd() {
-        callStack.Reset()
+    public func forceEnd() {
+        callStack.reset()
         
         _currentFlow.currentChoices = []
         
-        currentPointer = Pointer.Null
-        previousPointer = Pointer.Null
+        currentPointer = Pointer.null
+        previousPointer = Pointer.null
         
         didSafeExit = true
     }
     
-    func TrimWhitespaceFromFunctionEnd() {
-        assert(callStack.currentElement.type == .Function)
+    func trimWhitespaceFromFunctionEnd() {
+        assert(callStack.currentElement.type == .function)
         
         var functionStartPoint = callStack.currentElement.functionStartInOuputStream
         
@@ -1085,7 +1085,7 @@ public class StoryState {
             
             if txt!.isNewline || txt!.isInlineWhitespace {
                 _currentFlow.outputStream.remove(at: i)
-                OutputStreamDirty()
+                markOutputStreamDirty()
             }
             else {
                 break
@@ -1093,18 +1093,18 @@ public class StoryState {
         }
     }
     
-    public func PopCallstack(_ popType: PushPopType? = nil) {
+    public func popCallstack(_ popType: PushPopType? = nil) {
         // Add the end of a function call, trim any whitespace from the end.
         // (typo?)
-        if callStack.currentElement.type == .Function {
-            TrimWhitespaceFromFunctionEnd()
+        if callStack.currentElement.type == .function {
+            trimWhitespaceFromFunctionEnd()
         }
         
-        callStack.Pop(popType)
+        callStack.pop(popType)
     }
     
     // Don't make public since the method needs to be wrapped in Story for visit counting
-    func SetChosenPath(_ path: Path, _ incrementingTurnIndex: Bool) throws {
+    func setChosenPath(_ path: Path, _ incrementingTurnIndex: Bool) throws {
         // Changing direction, assume we need to clear current set of choices
         _currentFlow.currentChoices = []
         
@@ -1120,35 +1120,35 @@ public class StoryState {
         }
     }
     
-    public func StartFunctionEvaluationFromGame(_ funcContainer: Container, _ arguments: Any...) throws {
-        callStack.Push(.FunctionEvaluationFromGame, externalEvaluationStackHeight: evaluationStack.count)
-        callStack.currentElement.currentPointer = Pointer.StartOf(funcContainer)
+    public func startFunctionEvaluationFromGame(_ funcContainer: Container, _ arguments: Any...) throws {
+        callStack.push(.functionEvaluationFromGame, externalEvaluationStackHeight: evaluationStack.count)
+        callStack.currentElement.currentPointer = Pointer.startOf(container: funcContainer)
         
-        try PassArgumentsToEvaluationStack(arguments)
+        try passArgumentsToEvaluationStack(arguments)
     }
     
-    public func PassArgumentsToEvaluationStack(_ arguments: Any...) throws {
+    public func passArgumentsToEvaluationStack(_ arguments: Any...) throws {
         for i in 0 ..< arguments.count {
             let a = arguments[i]
             if !(a is Int || a is Float || a is Double || a is String || a is Bool || a is InkList) {
                 throw StoryError.invalidArgument(argName: String(describing: type(of: a)))
             }
             
-            PushEvaluationStack(CreateValue(a)!)
+            pushEvaluationStack(createValue(fromAny: a)!)
         }
     }
     
-    public func TryExitFunctionEvaluationFromGame() -> Bool {
-        if callStack.currentElement.type == .FunctionEvaluationFromGame {
-            currentPointer = Pointer.Null
+    public func tryExitFunctionEvaluationFromGame() -> Bool {
+        if callStack.currentElement.type == .functionEvaluationFromGame {
+            currentPointer = Pointer.null
             didSafeExit = true
             return true
         }
         return false
     }
     
-    public func CompleteFunctionEvaluationFromGame() throws -> Any? {
-        if callStack.currentElement.type != .FunctionEvaluationFromGame {
+    public func completeFunctionEvaluationFromGame() throws -> Any? {
+        if callStack.currentElement.type != .functionEvaluationFromGame {
             throw StoryError.expectedExternalFunctionEvaluationComplete(stackTrace: callStack.callStackTrace)
         }
         
@@ -1160,14 +1160,14 @@ public class StoryState {
         // have passed too many arguments, and we currently have no way to check for that)
         var returnedObj: Object? = nil
         while evaluationStack.count > originalEvaluationStackHeight {
-            let poppedObj = PopEvaluationStack()
+            let poppedObj = popEvaluationStack()
             if returnedObj == nil {
                 returnedObj = poppedObj
             }
         }
         
         // Finally, pop the external function evaluation
-        PopCallstack(.FunctionEvaluationFromGame)
+        popCallstack(.functionEvaluationFromGame)
         
         // What did we get back?
         if returnedObj != nil {
@@ -1180,7 +1180,7 @@ public class StoryState {
             
             // DivertTargets get returned as the string of components
             // (rather than a Path, which isn't public)
-            if returnVal.valueType == .DivertTarget {
+            if returnVal.valueType == .divertTarget {
                 return (returnVal as! DivertTargetValue).value?.description
             }
             
@@ -1210,7 +1210,7 @@ public class StoryState {
         return nil
     }
     
-    public func AddError(_ message: String, isWarning: Bool) {
+    public func addError(_ message: String, isWarning: Bool) {
         if !isWarning {
             currentErrors.append(message)
         }
@@ -1219,7 +1219,7 @@ public class StoryState {
         }
     }
     
-    func OutputStreamDirty() {
+    func markOutputStreamDirty() {
         _outputStreamTextDirty = true
         _outputStreamTagsDirty = true
     }

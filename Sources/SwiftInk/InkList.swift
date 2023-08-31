@@ -65,9 +65,9 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// Create a new empty ink list that's intended to hold items from a particular origin
     /// list definition. The origin Story is needed in order to be able to look up that definition.
     public init(_ singleOriginListName: String, _ originStory: Story) {
-        SetInitialOriginName(singleOriginListName)
+        setInitialOriginName(singleOriginListName)
         
-        if let def = originStory.listDefinitions!.TryListGetDefinition(singleOriginListName) {
+        if let def = originStory.listDefinitions!.tryListGetDefinition(forName: singleOriginListName) {
             origins = [def]
         }
         else {
@@ -86,8 +86,8 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     ///   - myListItem: Item key. (From C# docs, that seems wrong???)
     ///   - originStory: Origin story.
     /// - Returns: `InkList` created from string list item
-    public static func FromString(_ myListItem: String, _ originStory: Story) -> InkList {
-        if let listValue = originStory.listDefinitions!.FindSingleItemListWithName(myListItem) {
+    public static func from(string myListItem: String, forStory originStory: Story) -> InkList {
+        if let listValue = originStory.listDefinitions!.findSingleItemList(withName: myListItem) {
             return InkList(listValue.value!)
         }
         else {
@@ -100,15 +100,15 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// that it already has items in it from that source, or it did at one point - it can't be a
     /// completely fresh empty list, or a list that only contains items from a different list definition.
     /// - Parameter item: The item to add.
-    public func AddItem(_ item: InkListItem) {
+    public func add(_ item: InkListItem) {
         if item.originName == nil {
-            AddItem(item.itemName!)
+            add(fromString: item.itemName!)
             return
         }
         
         for origin in origins {
             if origin.name == item.originName {
-                if let intVal = origin.TryGetValueForItem(item) {
+                if let intVal = origin.tryGetValue(forItem: item) {
                     internalDict[item] = intVal
                     return
                 }
@@ -128,11 +128,11 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// it did at one point - it can't be a completely fresh empty list, or a list that only contains items from
     /// a different list definition
     /// - Parameter itemName: The name of the item to add(?)
-    public func AddItem(_ itemName: String) {
+    public func add(fromString itemName: String) {
         var foundListDef: ListDefinition? = nil
         
         for origin in origins {
-            if origin.ContainsItemWithName(itemName) {
+            if origin.contains(named: itemName) {
                 if foundListDef != nil{
                     fatalError("Could not add the item \(itemName) to this list because it could come from either \(origin.name) or \(foundListDef!.name)")
                 }
@@ -147,7 +147,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
         }
         
         let item = InkListItem(foundListDef!.name, itemName)
-        let itemVal = foundListDef!.ValueForItem(item)
+        let itemVal = foundListDef!.value(forItem: item)
         internalDict[item] = itemVal
     }
     
@@ -156,7 +156,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// (ignoring the original list where it was defined).
     /// - Parameter itemName: The name of the item to check for.
     /// - Returns: `true` if this ink list contains an item named `itemName`, and `false` otherwise.
-    public func ContainsItemNamed(_ itemName: String) -> Bool {
+    public func contains(itemNamed itemName: String) -> Bool {
         for itemWithValue in internalDict {
             if itemWithValue.key.itemName == itemName {
                 return true
@@ -197,11 +197,11 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     }
     private var _originNames: [String]? = []
     
-    public func SetInitialOriginName(_ initialOriginName: String) {
+    public func setInitialOriginName(_ initialOriginName: String) {
         _originNames = [initialOriginName]
     }
     
-    public func SetInitialOriginNames(_ initialOriginNames: [String]?) {
+    public func setInitialOriginNames(_ initialOriginNames: [String]?) {
         if initialOriginNames == nil {
             _originNames = nil
         }
@@ -259,7 +259,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     
     /// Returns a new list that is the combination of the current list and one that's
     /// passed in. Equivalent to calling `(list1 + list2)` in ink.
-    public func Union(_ otherList: InkList) -> InkList {
+    public func union(_ otherList: InkList) -> InkList {
         let union = InkList(self)
         for kv in otherList.internalDict {
             union.internalDict[kv.key] = kv.value
@@ -270,7 +270,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// Returns a new list that is the intersection of the current list with another
     /// list that's passed in - i.e. a list of the items that are shared between the
     /// two other lists. Equivalent to calling `(list1 ^ list2)` in ink.
-    public func Intersect(_ otherList: InkList) -> InkList {
+    public func intersect(_ otherList: InkList) -> InkList {
         let intersection = InkList()
         for kv in internalDict {
             if otherList.internalDict.keys.contains(kv.key) {
@@ -281,7 +281,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     }
     
     /// Fast test for the existence of any intersection between the current list and another
-    public func HasIntersection(_ otherList: InkList) -> Bool {
+    public func intersects(_ otherList: InkList) -> Bool {
         for kv in internalDict {
             if otherList.internalDict.keys.contains(kv.key) {
                 return true
@@ -293,7 +293,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// Returns a new list that's the same as the current one, except with the given items
     /// removed that are in the passed-in list. Equivalent to calling `(list1 - list2)` in ink.
     /// - Parameter listToRemove: List to remove.
-    public func Without(_ listToRemove: InkList) -> InkList {
+    public func without(_ listToRemove: InkList) -> InkList {
         let result = InkList(self)
         for kv in listToRemove.internalDict {
             result.internalDict.removeValue(forKey: kv.key)
@@ -303,7 +303,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     
     /// Returns `true` if the current list contains all the items that are in the list that
     /// is passed in. Equivalent to calling `(list1 ? list2)` in ink.
-    public func Contains(_ otherList: InkList) -> Bool {
+    public func contains(_ otherList: InkList) -> Bool {
         if otherList.internalDict.count == 0 || internalDict.count == 0 {
             return false
         }
@@ -316,7 +316,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     }
     
     /// Returns true if the current list contains an item matching the given name.
-    public func Contains(_ listItemName: String) -> Bool {
+    public func contains(_ listItemName: String) -> Bool {
         for kv in internalDict {
             if kv.key.itemName == listItemName {
                 return true
@@ -327,7 +327,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     
     /// Returns `true` if all the item values in the current list are greater than all the
     /// item values in the passed-in list. Equivalent to calling `(list1 > list2)` in ink.
-    public func GreaterThan(_ otherList: InkList) -> Bool {
+    public func isGreaterThan(_ otherList: InkList) -> Bool {
         if internalDict.count == 0 {
             return false
         }
@@ -343,7 +343,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// the item values in the passed-in list. None of the item values in the current list must
     /// fall below the item values in the passed-in list. Equivalent to `(list1 >= list2)` in ink,
     /// or `LIST_MIN(list1) >= LIST_MIN(list2) && LIST_MAX(list1) >= LIST_MAX(list2)`.
-    public func GreaterThanOrEquals(_ otherList: InkList) -> Bool {
+    public func isGreaterThanOrEquals(_ otherList: InkList) -> Bool {
         if internalDict.count == 0 {
             return false
         }
@@ -356,7 +356,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     
     /// Returns `true` if all the item values in the current list are less than all the
     /// item values in the passed-in list. Equivalent to calling `(list1 < list2)` in ink.
-    public func LessThan(_ otherList: InkList) -> Bool {
+    public func isLessThan(_ otherList: InkList) -> Bool {
         if otherList.internalDict.count == 0 {
             return false
         }
@@ -371,7 +371,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// the item values in the passed-in list. None of the item values in the current list must
     /// go above the item values in the passed-in list. Equivalent to `(list1 <= list2)` in ink,
     /// or `LIST_MAX(list1) <= LIST_MAX(list2) && LIST_MIN(list1) <= LIST_MIN(list2)`.
-    public func LessThanOrEquals(_ otherList: InkList) -> Bool {
+    public func isLessThanOrEquals(_ otherList: InkList) -> Bool {
         if otherList.internalDict.count == 0 {
             return false
         }
@@ -382,7 +382,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
         return maxItem.value <= otherList.maxItem.value && minItem.value <= otherList.minItem.value
     }
     
-    public func MaxAsList() -> InkList {
+    public func maxAsList() -> InkList {
         if internalDict.count > 0 {
             return InkList(maxItem)
         }
@@ -391,7 +391,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
         }
     }
     
-    public func MinAsList() -> InkList {
+    public func minAsList() -> InkList {
         if internalDict.count > 0 {
             return InkList(minItem)
         }
@@ -406,7 +406,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
     /// you can specify the upper and lower bounds. If you pass in multi-item lists, it'll
     /// use the minimum and maximum items in those lists respectively.
     /// WARNING: Calling this method requires a full sort of all the elements in the list.
-    public func ListWithSubrange(_ minBound: Any?, _ maxBound: Any?) -> InkList {
+    public func listWithSubrange(min minBound: Any?, max maxBound: Any?) -> InkList {
         if internalDict.count == 0 {
             return InkList()
         }
@@ -435,7 +435,7 @@ public class InkList: Equatable, Hashable, CustomStringConvertible {
         }
         
         let subList = InkList()
-        subList.SetInitialOriginNames(originNames)
+        subList.setInitialOriginNames(originNames)
         for item in ordered {
             if item.value >= minValue && item.value <= maxValue {
                 subList.internalDict[item.key] = item.value
